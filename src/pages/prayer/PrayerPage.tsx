@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
-import type { Prayer } from '../../types';
 import {
   BookHeart, Plus, X, Trash2, Check,
   Lock, Globe, ChevronDown, ChevronUp,

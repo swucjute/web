@@ -5,7 +5,7 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import type { User } from '../../types';
 import { format } from 'date-fns';
-import { Search, Plus, Edit2, Trash2, X, Users, Phone, Calendar, Shield } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Users, Phone, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 export function Members() {
@@ -60,21 +60,6 @@ export function Members() {
     setIsDrawerOpen(false);
   };
 
-  const handleEdit = (user: User) => {
-    setEditingUser(user);
-    setFormData({
-      name: user.name,
-      email: user.email,
-      password: user.password,
-      role: user.role,
-      phone: user.phone,
-      birthDate: user.birthDate,
-      joinDate: user.joinDate,
-      department: user.department,
-      position: user.position || '',
-    });
-    setIsDrawerOpen(true);
-  };
 
   const handleDelete = (id: string) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {

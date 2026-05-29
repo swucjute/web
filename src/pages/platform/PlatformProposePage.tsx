@@ -34,7 +34,7 @@ export function PlatformProposePage() {
   const { currentUser } = useAuth();
   const { addPlatform } = usePlatform();
 
-  const [form, setForm] = useState({ title: '', scheduledDate: '', content: '', purpose: '', other: '' });
+  const [form, setForm] = useState({ title: '', scheduledDate: '', location: '', content: '', purpose: '', other: '' });
   const [posterFile, setPosterFile] = useState<string>('');
   const [posterPreview, setPosterPreview] = useState<string>('');
   const [submitted, setSubmitted] = useState(false);
@@ -60,6 +60,7 @@ export function PlatformProposePage() {
     addPlatform({
       title: form.title,
       scheduledDate: form.scheduledDate,
+      location: form.location,
       content: form.content,
       purpose: form.purpose,
       other: form.other,

@@ -1,35 +1,39 @@
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
-import { Users, DollarSign, Calendar, Church, ChevronRight, Bell, ClipboardList, BookHeart } from 'lucide-react';
-import { format } from 'date-fns';
+import { Users, Calendar, Church, ChevronRight, Bell, ClipboardList, BookHeart } from 'lucide-react';
+import { format, endOfWeek, endOfMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Link } from 'react-router';
 
 export function Dashboard() {
   const { currentUser, users } = useAuth();
-  const { finances, events, worships, surveys, prayers } = useData();
+  const { events, worships, surveys, prayers } = useData();
 
   const activeMembers = users.filter(u => u.isActive).length;
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const today = format(now, 'yyyy-MM-dd');
+  const weekEnd = format(endOfWeek(now, { weekStartsOn: 0 }), 'yyyy-MM-dd');
+  const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
 
-  const monthlyIncome = finances
-    .filter(f => f.type === 'income' &&
-      new Date(f.date).getMonth() === currentMonth &&
-      new Date(f.date).getFullYear() === currentYear)
-    .reduce((sum, f) => sum + f.amount, 0);
+  const sortedFutureEvents = events
+    .filter(e => e.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
 
-  const monthlyExpense = finances
-    .filter(f => f.type === 'expense' &&
-      new Date(f.date).getMonth() === currentMonth &&
-      new Date(f.date).getFullYear() === currentYear)
-    .reduce((sum, f) => sum + f.amount, 0);
+  const thisWeekEvents = sortedFutureEvents.filter(e => e.date <= weekEnd);
+  const thisMonthEvents = sortedFutureEvents.filter(e => e.date <= monthEnd);
 
-  const upcomingEvents = events
-    .filter(e => new Date(e.date) >= new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 3);
+  const upcomingEvents = thisWeekEvents.length > 0
+    ? thisWeekEvents.slice(0, 3)
+    : thisMonthEvents.length > 0
+    ? thisMonthEvents.slice(0, 3)
+    : sortedFutureEvents.slice(0, 3);
+
+  const upcomingLabel = thisWeekEvents.length > 0
+    ? '이번 주 일정'
+    : thisMonthEvents.length > 0
+    ? '이번 달 일정'
+    : '다가오는 일정';
 
   const recentWorships = worships
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -42,7 +46,7 @@ export function Dashboard() {
   return (
     <div className="space-y-0">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-5 pt-5 pb-8">
+      <div className="bg-linear-to-br from-blue-600 to-blue-700 px-5 pt-5 pb-8">
         <div className="flex items-start justify-between mb-1">
           <div>
             <p className="text-blue-200 text-sm">안녕하세요 👋</p>
@@ -107,7 +111,7 @@ export function Dashboard() {
         {/* Upcoming Events */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-50">
-            <h2 className="font-semibold text-gray-800">다가오는 일정</h2>
+            <h2 className="font-semibold text-gray-800">{upcomingLabel}</h2>
             <Link to="/calendar" className="text-xs text-blue-600 font-medium flex items-center gap-0.5">
               전체보기 <ChevronRight size={14} />
             </Link>
