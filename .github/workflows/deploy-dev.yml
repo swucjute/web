@@ -5,6 +5,7 @@ on:
     branches: [develop]
   pull_request:
     branches: [develop]
+  workflow_dispatch:   # Actions 탭에서 수동 실행
 
 jobs:
   build-and-test:
@@ -23,7 +24,7 @@ jobs:
   # develop에 푸시되면 자동 배포
   deploy-dev:
     needs: build-and-test
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/develop' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: read
