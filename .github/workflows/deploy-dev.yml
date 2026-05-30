@@ -1,0 +1,61 @@
+name: Deploy to Dev Server
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  # develop에 푸시되면 자동 배포
+  deploy-dev:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build & Push Docker Image (dev)
+        run: |
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker build -t ghcr.io/swucjute/web:dev .
+          docker push ghcr.io/swucjute/web:dev
+
+      # ✅ deploy 사용자로 실행 (root 대신)
+      - name: Deploy to dev server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USERNAME }}  # deploy 사용자
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            cd /home/deploy/infra  # ← deploy 사용자의 infra 경로
+            docker compose -f docker-compose.dev.yml pull web
+            docker compose -f docker-compose.dev.yml up -d --no-deps web
+            docker image prune -f
+            echo "✅ Deploy completed at $(date)"
+
+      - name: Notify Slack (success)
+        if: success()
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -d '{"text": "✅ Dev web deployment successful!\n🔗 http://'${{ secrets.DEV_SERVER_HOST }}'"}'
+
+      - name: Notify Slack (failure)
+        if: failure()
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -d '{"text": "❌ Dev web deployment failed!\nRepo: web\nBranch: develop"}'
