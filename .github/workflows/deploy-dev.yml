@@ -33,7 +33,7 @@ jobs:
 
       - name: Build & Push Docker Image (dev)
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ github.token }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker build -t ghcr.io/swucjute/web:dev .
           docker push ghcr.io/swucjute/web:dev
 
