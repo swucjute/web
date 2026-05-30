@@ -45,6 +45,7 @@ jobs:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USERNAME }}  # deploy 사용자
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script_stop: true   # 중간 명령 실패 시 즉시 중단 → Action 실패로 표시
           script: |
             cd /home/deploy/infra  # ← deploy 사용자의 infra 경로
             docker compose -f docker-compose.dev.yml pull web
