@@ -1,13 +1,12 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { Outlet, Link, useLocation } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useState } from 'react';
 import {
   Home,
-  Calendar,
   Church,
   MoreHorizontal,
   LayoutGrid,
-  X,
+  Users,
 } from 'lucide-react';
 
 interface NavItem {
@@ -21,7 +20,7 @@ const mainNavItems: NavItem[] = [
   { path: '/', label: '홈', icon: Home },
   { path: '/worship', label: '예배', icon: Church },
   { path: '/platform', label: '플랫폼', icon: LayoutGrid },
-  { path: '/calendar', label: '일정', icon: Calendar },
+  { path: '/community', label: '커뮤니티', icon: Users },
   { path: '/more', label: '더보기', icon: MoreHorizontal },
 ];
 
@@ -44,25 +43,6 @@ export function Layout() {
 
         {/* Header */}
         <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
-          <div className="flex items-center justify-between px-4 h-14">
-            <div className="flex items-center gap-2">
-              <Church className="text-blue-600" size={22} />
-              <span className="text-base font-semibold text-gray-800">주뜨청년부</span>
-            </div>
-            <Link to="/more" className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-xs text-gray-500">
-                  {currentUser.role === 'admin' ? '관리자' : currentUser.role === 'leader' ? '리더' : '회원'}
-                </p>
-                <p className="text-sm font-medium text-gray-800 leading-tight">{currentUser.name}</p>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-600 text-sm font-semibold">
-                  {currentUser.name?.charAt(0)}
-                </span>
-              </div>
-            </Link>
-          </div>
         </header>
 
         {/* Main Content — pb-16 so content clears the fixed nav */}

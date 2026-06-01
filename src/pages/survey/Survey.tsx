@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Survey as SurveyType, SurveyQuestion, SurveyResponse } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
 import { Input } from '../../components/ui/input';
@@ -22,15 +23,15 @@ export function Survey() {
 
   // ── 목록 뷰 상태 ────────────────────────────────────
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
-  const [selectedSurvey, setSelectedSurvey] = useState<any>(null);
+  const [selectedSurvey, setSelectedSurvey] = useState<SurveyType | null>(null);
   const [surveyViewMode, setSurveyViewMode] = useState<'respond' | 'results'>('respond');
-  const [surveyAnswers, setSurveyAnswers] = useState<any>({});
+  const [surveyAnswers, setSurveyAnswers] = useState<Record<string, string | string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   // ── 생성 폼 상태 ────────────────────────────────────
   const [formData, setFormData] = useState({ title: '', description: '', deadline: '' });
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     type: 'text' as 'text' | 'choice' | 'multiple',
@@ -39,25 +40,25 @@ export function Survey() {
   const [creating, setCreating] = useState(false);
 
   // ── 수정 시트 상태 (제목·설명·마감일만) ───────────────
-  const [editingSurvey, setEditingSurvey] = useState<any>(null);
+  const [editingSurvey, setEditingSurvey] = useState<SurveyType | null>(null);
   const [editForm, setEditForm] = useState({ title: '', description: '', deadline: '' });
   const [saving, setSaving] = useState(false);
 
   const canManage = isLeader();
 
   // ── 도우미 ──────────────────────────────────────────
-  const hasUserResponded = (survey: any) =>
-    survey.responses?.some((r: any) => r.userId === currentUser?.id);
+  const hasUserResponded = (survey: SurveyType) =>
+    survey.responses?.some((r: SurveyResponse) => r.userId === currentUser?.id);
 
-  const getResults = (question: any, responses: any[]) => {
-    const answers = responses.map((r: any) => r.answers[question.id]).filter(Boolean);
-    if (question.type === 'text') return answers;
-    const counts: any = {};
-    question.options?.forEach((opt: string) => { counts[opt] = 0; });
+  const getResults = (question: SurveyQuestion, responses: SurveyResponse[]): string[] | Record<string, number> => {
+    const answers = responses.map((r) => r.answers[question.id]).filter(Boolean);
+    if (question.type === 'text') return answers.filter((a): a is string => typeof a === 'string');
+    const counts: Record<string, number> = {};
+    question.options?.forEach((opt) => { counts[opt] = 0; });
     if (question.type === 'choice') {
-      answers.forEach((a: string) => { if (counts[a] !== undefined) counts[a]++; });
+      answers.forEach((a) => { const s = a as string; if (counts[s] !== undefined) counts[s]++; });
     } else {
-      answers.forEach((arr: string[]) => {
+      answers.forEach((arr) => {
         if (Array.isArray(arr)) arr.forEach((a) => { if (counts[a] !== undefined) counts[a]++; });
       });
     }
@@ -119,7 +120,7 @@ export function Survey() {
     }
   };
 
-  const openEdit = (survey: any) => {
+  const openEdit = (survey: SurveyType) => {
     setEditingSurvey(survey);
     setEditForm({ title: survey.title, description: survey.description, deadline: survey.deadline });
     setSelectedSurvey(null);
@@ -318,7 +319,7 @@ export function Survey() {
             <div className="overflow-y-auto flex-1 px-5 py-4">
               {surveyViewMode === 'respond' ? (
                 <div className="space-y-5">
-                  {selectedSurvey.questions.map((question: any, index: number) => (
+                  {selectedSurvey.questions.map((question: SurveyQuestion, index: number) => (
                     <div key={question.id} className="space-y-2">
                       <p className="text-sm font-semibold text-gray-800">
                         {index + 1}. {question.question}
@@ -339,7 +340,7 @@ export function Survey() {
                         />
                       ) : question.type === 'choice' ? (
                         <div className="space-y-2">
-                          {question.options.map((option: string) => (
+                          {(question.options ?? []).map((option: string) => (
                             <label key={option} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${surveyAnswers[question.id] === option ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'}`}>
                               <input type="radio" name={question.id} value={option} checked={surveyAnswers[question.id] === option} onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [question.id]: e.target.value })} disabled={hasUserResponded(selectedSurvey) || isPast(new Date(selectedSurvey.deadline))} className="hidden" />
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${surveyAnswers[question.id] === option ? 'border-blue-600' : 'border-gray-300'}`}>
@@ -351,11 +352,11 @@ export function Survey() {
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {question.options.map((option: string) => {
+                          {(question.options ?? []).map((option: string) => {
                             const isChecked = Array.isArray(surveyAnswers[question.id]) && surveyAnswers[question.id].includes(option);
                             return (
                               <label key={option} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${isChecked ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'}`}>
-                                <input type="checkbox" checked={isChecked} onChange={(e) => { const current = surveyAnswers[question.id] || []; const newVal = e.target.checked ? [...current, option] : current.filter((v: string) => v !== option); setSurveyAnswers({ ...surveyAnswers, [question.id]: newVal }); }} disabled={hasUserResponded(selectedSurvey) || isPast(new Date(selectedSurvey.deadline))} className="hidden" />
+                                <input type="checkbox" checked={isChecked} onChange={(e) => { const current = (Array.isArray(surveyAnswers[question.id]) ? surveyAnswers[question.id] : []) as string[]; const newVal = e.target.checked ? [...current, option] : current.filter((v) => v !== option); setSurveyAnswers({ ...surveyAnswers, [question.id]: newVal }); }} disabled={hasUserResponded(selectedSurvey) || isPast(new Date(selectedSurvey.deadline))} className="hidden" />
                                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${isChecked ? 'border-blue-600 bg-blue-600' : 'border-gray-300'}`}>
                                   {isChecked && <span className="text-white text-xs">✓</span>}
                                 </div>
@@ -393,7 +394,7 @@ export function Survey() {
                 </div>
               ) : (
                 <div className="space-y-5">
-                  {selectedSurvey.questions.map((question: any, index: number) => {
+                  {selectedSurvey.questions.map((question: SurveyQuestion, index: number) => {
                     const results = getResults(question, selectedSurvey.responses ?? []);
                     const totalResponses = selectedSurvey.responses?.length ?? 0;
                     return (
@@ -402,7 +403,7 @@ export function Survey() {
                         {question.type === 'text' ? (
                           <div className="space-y-2">
                             {Array.isArray(results) && results.length > 0 ? (
-                              results.map((answer: string, i: number) => (
+                              (results as string[]).map((answer, i) => (
                                 <div key={i} className="p-3 bg-white rounded-xl text-sm text-gray-700 border border-gray-100">{answer}</div>
                               ))
                             ) : (
@@ -411,8 +412,8 @@ export function Survey() {
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {question.options.map((option: string) => {
-                              const count = results[option] || 0;
+                            {(question.options ?? []).map((option: string) => {
+                              const count = (results as Record<string, number>)[option] || 0;
                               const percentage = totalResponses > 0 ? (count / totalResponses) * 100 : 0;
                               return (
                                 <div key={option} className="space-y-1">
@@ -468,7 +469,7 @@ export function Survey() {
               <div className="border border-gray-100 rounded-2xl p-3 bg-gray-50">
                 <p className="text-xs font-semibold text-gray-500 mb-2">질문 목록 (수정 불가)</p>
                 <div className="space-y-1.5">
-                  {editingSurvey.questions.map((q: any, i: number) => (
+                  {editingSurvey.questions.map((q: SurveyQuestion, i: number) => (
                     <div key={q.id} className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-gray-100">
                       <span className="text-xs text-gray-400 shrink-0">{i + 1}.</span>
                       <span className="text-xs text-gray-700 flex-1 truncate">{q.question}</span>
@@ -541,7 +542,7 @@ export function Survey() {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">응답 형식</Label>
-                    <Select value={newQuestion.type} onValueChange={(value: any) => setNewQuestion({ ...newQuestion, type: value })}>
+                    <Select value={newQuestion.type} onValueChange={(value) => setNewQuestion({ ...newQuestion, type: value as 'text' | 'choice' | 'multiple' })}>
                       <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="text">주관식</SelectItem>

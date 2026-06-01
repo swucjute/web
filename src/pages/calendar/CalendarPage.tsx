@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
-import { Calendar as CalendarIcon, Plus, Clock, MapPin, ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Clock, MapPin, ChevronLeft, ChevronRight, X, Trash2, Pencil } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -30,12 +30,32 @@ const eventTypeLabels: Record<string, string> = {
   other: '기타',
 };
 
+const categoryDotColors: Record<string, string> = {
+  예배: 'bg-purple-400',
+  공지: 'bg-blue-400',
+  전도: 'bg-green-400',
+  행사: 'bg-orange-400',
+};
+
+const categoryBadgeColors: Record<string, string> = {
+  예배: 'bg-purple-50 text-purple-700 border-purple-200',
+  공지: 'bg-blue-50 text-blue-700 border-blue-200',
+  전도: 'bg-green-50 text-green-700 border-green-200',
+  행사: 'bg-orange-50 text-orange-700 border-orange-200',
+};
+
+type CalendarItem =
+  | { id: string; title: string; date: string; source: 'event'; type: string; time: string; location: string; description: string }
+  | { id: string; title: string; date: string; source: 'post'; category?: string; postId: string };
+
 export function CalendarPage() {
+  const navigate = useNavigate();
   const { isLeader } = useAuth();
-  const { events, addEvent, deleteEvent } = useData();
+  const { events, addEvent, updateEvent, deleteEvent, posts } = useData();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -53,13 +73,44 @@ export function CalendarPage() {
   const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   const calDays = eachDayOfInterval({ start: calStart, end: calEnd });
 
+  // Posts with a date set
+  const postsWithDate = posts.filter(p => p.date && p.date.length > 0);
+
+  const getItemsForDate = (date: Date): CalendarItem[] => {
+    const evItems: CalendarItem[] = events
+      .filter(e => isSameDay(new Date(e.date), date))
+      .map(e => ({ id: e.id, title: e.title, date: e.date, source: 'event', type: e.type, time: e.time, location: e.location, description: e.description }));
+    const postItems: CalendarItem[] = postsWithDate
+      .filter(p => isSameDay(new Date(p.date!), date))
+      .map(p => ({ id: p.id, title: p.title, date: p.date!, source: 'post', category: p.category, postId: p.id }));
+    return [...evItems, ...postItems];
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addEvent({ ...formData, createdBy: 'current-user' });
+    if (editingId) {
+      updateEvent(editingId, formData);
+    } else {
+      addEvent({ ...formData, createdBy: 'current-user' });
+    }
     resetForm();
   };
 
+  const handleEdit = (event: typeof events[0]) => {
+    setEditingId(event.id);
+    setFormData({
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      type: event.type,
+    });
+    setIsDrawerOpen(true);
+  };
+
   const resetForm = () => {
+    setEditingId(null);
     setFormData({
       title: '',
       description: '',
@@ -77,16 +128,19 @@ export function CalendarPage() {
     }
   };
 
-  const getEventsForDate = (date: Date) => {
-    return events.filter(event => isSameDay(new Date(event.date), date));
-  };
-
-  const upcomingEvents = events
-    .filter(e => new Date(e.date) >= new Date())
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const upcomingItems: CalendarItem[] = [
+    ...events
+      .filter(e => e.date >= today)
+      .map(e => ({ id: e.id, title: e.title, date: e.date, source: 'event' as const, type: e.type, time: e.time, location: e.location, description: e.description })),
+    ...postsWithDate
+      .filter(p => p.date! >= today)
+      .map(p => ({ id: p.id, title: p.title, date: p.date!, source: 'post' as const, category: p.category, postId: p.id })),
+  ]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 5);
 
-  const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
+  const selectedDateItems = selectedDate ? getItemsForDate(selectedDate) : [];
 
   return (
     <div className="flex flex-col">
@@ -156,7 +210,7 @@ export function CalendarPage() {
           {/* Calendar Grid */}
           <div className="grid grid-cols-7">
             {calDays.map((day, i) => {
-              const dayEvents = getEventsForDate(day);
+              const dayItems = getItemsForDate(day);
               const isCurrentDay = isToday(day);
               const isCurrentMonth = day.getMonth() === currentDate.getMonth();
               const isSelected = selectedDate && isSameDay(day, selectedDate);
@@ -184,14 +238,18 @@ export function CalendarPage() {
                     </span>
                   </div>
                   <div className="space-y-0.5">
-                    {dayEvents.slice(0, 2).map(event => (
+                    {dayItems.slice(0, 2).map(item => (
                       <div
-                        key={event.id}
-                        className={`h-1.5 rounded-full ${eventTypeColors[event.type] || 'bg-gray-400'}`}
+                        key={item.id}
+                        className={`h-1.5 rounded-full ${
+                          item.source === 'event'
+                            ? eventTypeColors[item.type] || 'bg-gray-400'
+                            : categoryDotColors[item.category ?? ''] || 'bg-orange-400'
+                        }`}
                       />
                     ))}
-                    {dayEvents.length > 2 && (
-                      <p className="text-[9px] text-gray-400 text-center">+{dayEvents.length - 2}</p>
+                    {dayItems.length > 2 && (
+                      <p className="text-[9px] text-gray-400 text-center">+{dayItems.length - 2}</p>
                     )}
                   </div>
                 </div>
@@ -200,7 +258,7 @@ export function CalendarPage() {
           </div>
         </div>
 
-        {/* Selected Date Events */}
+        {/* Selected Date Items */}
         {selectedDate && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-50">
@@ -208,49 +266,72 @@ export function CalendarPage() {
                 {format(selectedDate, 'M월 d일 (E) 일정', { locale: ko })}
               </h2>
             </div>
-            {selectedDateEvents.length === 0 ? (
+            {selectedDateItems.length === 0 ? (
               <div className="py-8 text-center">
                 <p className="text-gray-400 text-sm">이 날에는 일정이 없습니다</p>
               </div>
             ) : (
               <div>
-                {selectedDateEvents.map((event, idx) => (
+                {selectedDateItems.map((item, idx) => (
                   <div
-                    key={event.id}
-                    className={`px-4 py-3.5 ${idx < selectedDateEvents.length - 1 ? 'border-b border-gray-50' : ''}`}
+                    key={item.id}
+                    className={`px-4 py-3.5 ${idx < selectedDateItems.length - 1 ? 'border-b border-gray-50' : ''} ${item.source === 'post' ? 'cursor-pointer active:bg-gray-50' : ''}`}
+                    onClick={item.source === 'post' ? () => navigate(`/community/${item.postId}`) : undefined}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${eventTypeColors[event.type]}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-xs px-2 py-0.5 rounded-full border ${eventTypeBgColors[event.type]}`}>
-                            {eventTypeLabels[event.type]}
-                          </span>
-                        </div>
-                        <p className="font-medium text-gray-800 text-sm">{event.title}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <Clock size={11} />
-                            <span>{event.time}</span>
+                    {item.source === 'event' ? (
+                      <div className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${eventTypeColors[item.type]}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${eventTypeBgColors[item.type]}`}>
+                              {eventTypeLabels[item.type]}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <MapPin size={11} />
-                            <span>{event.location}</span>
+                          <p className="font-medium text-gray-800 text-sm">{item.title}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock size={11} />
+                              <span>{item.time}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <MapPin size={11} />
+                              <span>{item.location}</span>
+                            </div>
                           </div>
+                          {item.description && (
+                            <p className="text-xs text-gray-500 mt-1">{item.description}</p>
+                          )}
                         </div>
-                        {event.description && (
-                          <p className="text-xs text-gray-500 mt-1">{event.description}</p>
+                        {canEdit && (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); const ev = events.find(ev => ev.id === item.id); if (ev) handleEdit(ev); }}
+                              className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-400"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                              className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         )}
                       </div>
-                      {canEdit && (
-                        <button
-                          onClick={() => handleDelete(event.id)}
-                          className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400 shrink-0"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${categoryDotColors[item.category ?? ''] || 'bg-orange-400'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800 text-sm truncate">{item.title}</p>
+                        </div>
+                        {item.category && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${categoryBadgeColors[item.category] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                            {item.category}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -258,42 +339,62 @@ export function CalendarPage() {
           </div>
         )}
 
-        {/* Upcoming Events */}
+        {/* Upcoming Items */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-50">
             <h2 className="font-semibold text-gray-800 text-sm">다가오는 일정</h2>
           </div>
-          {upcomingEvents.length === 0 ? (
+          {upcomingItems.length === 0 ? (
             <div className="py-8 text-center">
               <CalendarIcon size={32} className="text-gray-200 mx-auto mb-2" />
               <p className="text-gray-400 text-sm">예정된 일정이 없습니다</p>
             </div>
           ) : (
             <div>
-              {upcomingEvents.map((event, idx) => (
+              {upcomingItems.map((item, idx) => (
                 <div
-                  key={event.id}
-                  className={`flex items-center gap-3 px-4 py-3.5 ${idx < upcomingEvents.length - 1 ? 'border-b border-gray-50' : ''}`}
+                  key={item.id}
+                  className={`flex items-center gap-3 px-4 py-3.5 ${idx < upcomingItems.length - 1 ? 'border-b border-gray-50' : ''} ${item.source === 'post' ? 'cursor-pointer active:bg-gray-50' : ''}`}
+                  onClick={item.source === 'post' ? () => navigate(`/community/${item.postId}`) : undefined}
                 >
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${eventTypeColors[event.type]}`} />
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                    item.source === 'event'
+                      ? eventTypeColors[item.type]
+                      : categoryDotColors[item.category ?? ''] || 'bg-orange-400'
+                  }`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{event.title}</p>
+                    <p className="text-sm font-medium text-gray-800 truncate">{item.title}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-xs text-gray-500">
-                        {format(new Date(event.date), 'M월 d일 (E)', { locale: ko })} {event.time}
+                        {format(new Date(item.date), 'M월 d일 (E)', { locale: ko })}
+                        {item.source === 'event' && ` ${item.time}`}
                       </p>
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${eventTypeBgColors[event.type]}`}>
-                    {eventTypeLabels[event.type]}
-                  </span>
-                  {canEdit && (
-                    <button
-                      onClick={() => handleDelete(event.id)}
-                      className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400 shrink-0"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                  {item.source === 'event' ? (
+                    <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${eventTypeBgColors[item.type]}`}>
+                      {eventTypeLabels[item.type]}
+                    </span>
+                  ) : item.category ? (
+                    <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${categoryBadgeColors[item.category] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                      {item.category}
+                    </span>
+                  ) : null}
+                  {item.source === 'event' && canEdit && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); const ev = events.find(ev => ev.id === item.id); if (ev) handleEdit(ev); }}
+                        className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-400"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                        className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -308,7 +409,7 @@ export function CalendarPage() {
           <div className="absolute inset-0 bg-black/40" onClick={resetForm} />
           <div className="relative bg-white rounded-t-3xl z-10 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-              <h2 className="font-bold text-gray-800">일정 추가</h2>
+              <h2 className="font-bold text-gray-800">{editingId ? '일정 수정' : '일정 추가'}</h2>
               <button onClick={resetForm} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
                 <X size={16} className="text-gray-500" />
               </button>
@@ -324,22 +425,27 @@ export function CalendarPage() {
                     className="rounded-xl"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <Label className="text-sm">유형 *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value: any) => setFormData({ ...formData, type: value })}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="worship">예배</SelectItem>
-                      <SelectItem value="meeting">모임</SelectItem>
-                      <SelectItem value="event">행사</SelectItem>
-                      <SelectItem value="other">기타</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(['worship', 'meeting', 'event', 'other'] as const).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, type })}
+                        className={`flex flex-col items-center gap-1.5 py-2.5 rounded-xl border-2 transition-all ${
+                          formData.type === type
+                            ? 'border-gray-700 bg-gray-50'
+                            : 'border-gray-100 bg-white'
+                        }`}
+                      >
+                        <span className={`w-3 h-3 rounded-full ${eventTypeColors[type]}`} />
+                        <span className={`text-xs font-medium ${formData.type === type ? 'text-gray-800' : 'text-gray-400'}`}>
+                          {eventTypeLabels[type]}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -393,7 +499,7 @@ export function CalendarPage() {
                     type="submit"
                     className="flex-1 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium active:bg-blue-700 transition"
                   >
-                    추가
+                    {editingId ? '수정' : '추가'}
                   </button>
                 </div>
               </form>
