@@ -50,15 +50,15 @@ export function Survey() {
   const hasUserResponded = (survey: SurveyType) =>
     survey.responses?.some((r: SurveyResponse) => r.userId === currentUser?.id);
 
-  const getResults = (question: SurveyQuestion, responses: SurveyResponse[]) => {
+  const getResults = (question: SurveyQuestion, responses: SurveyResponse[]): string[] | Record<string, number> => {
     const answers = responses.map((r) => r.answers[question.id]).filter(Boolean);
-    if (question.type === 'text') return answers;
+    if (question.type === 'text') return answers.filter((a): a is string => typeof a === 'string');
     const counts: Record<string, number> = {};
-    question.options?.forEach((opt: string) => { counts[opt] = 0; });
+    question.options?.forEach((opt) => { counts[opt] = 0; });
     if (question.type === 'choice') {
-      answers.forEach((a: string) => { if (counts[a] !== undefined) counts[a]++; });
+      answers.forEach((a) => { const s = a as string; if (counts[s] !== undefined) counts[s]++; });
     } else {
-      answers.forEach((arr: string[]) => {
+      answers.forEach((arr) => {
         if (Array.isArray(arr)) arr.forEach((a) => { if (counts[a] !== undefined) counts[a]++; });
       });
     }
@@ -340,7 +340,7 @@ export function Survey() {
                         />
                       ) : question.type === 'choice' ? (
                         <div className="space-y-2">
-                          {question.options.map((option: string) => (
+                          {(question.options ?? []).map((option: string) => (
                             <label key={option} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${surveyAnswers[question.id] === option ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'}`}>
                               <input type="radio" name={question.id} value={option} checked={surveyAnswers[question.id] === option} onChange={(e) => setSurveyAnswers({ ...surveyAnswers, [question.id]: e.target.value })} disabled={hasUserResponded(selectedSurvey) || isPast(new Date(selectedSurvey.deadline))} className="hidden" />
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${surveyAnswers[question.id] === option ? 'border-blue-600' : 'border-gray-300'}`}>
@@ -352,11 +352,11 @@ export function Survey() {
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {question.options.map((option: string) => {
+                          {(question.options ?? []).map((option: string) => {
                             const isChecked = Array.isArray(surveyAnswers[question.id]) && surveyAnswers[question.id].includes(option);
                             return (
                               <label key={option} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${isChecked ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'}`}>
-                                <input type="checkbox" checked={isChecked} onChange={(e) => { const current = surveyAnswers[question.id] || []; const newVal = e.target.checked ? [...current, option] : current.filter((v: string) => v !== option); setSurveyAnswers({ ...surveyAnswers, [question.id]: newVal }); }} disabled={hasUserResponded(selectedSurvey) || isPast(new Date(selectedSurvey.deadline))} className="hidden" />
+                                <input type="checkbox" checked={isChecked} onChange={(e) => { const current = (Array.isArray(surveyAnswers[question.id]) ? surveyAnswers[question.id] : []) as string[]; const newVal = e.target.checked ? [...current, option] : current.filter((v) => v !== option); setSurveyAnswers({ ...surveyAnswers, [question.id]: newVal }); }} disabled={hasUserResponded(selectedSurvey) || isPast(new Date(selectedSurvey.deadline))} className="hidden" />
                                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${isChecked ? 'border-blue-600 bg-blue-600' : 'border-gray-300'}`}>
                                   {isChecked && <span className="text-white text-xs">✓</span>}
                                 </div>
@@ -403,7 +403,7 @@ export function Survey() {
                         {question.type === 'text' ? (
                           <div className="space-y-2">
                             {Array.isArray(results) && results.length > 0 ? (
-                              results.map((answer: string, i: number) => (
+                              (results as string[]).map((answer, i) => (
                                 <div key={i} className="p-3 bg-white rounded-xl text-sm text-gray-700 border border-gray-100">{answer}</div>
                               ))
                             ) : (
@@ -412,8 +412,8 @@ export function Survey() {
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {question.options.map((option: string) => {
-                              const count = results[option] || 0;
+                            {(question.options ?? []).map((option: string) => {
+                              const count = (results as Record<string, number>)[option] || 0;
                               const percentage = totalResponses > 0 ? (count / totalResponses) * 100 : 0;
                               return (
                                 <div key={option} className="space-y-1">

@@ -131,7 +131,7 @@ interface DataContextType {
   addSurvey: (survey: Omit<Survey, 'id' | 'createdAt' | 'responses'>) => Promise<void>;
   updateSurvey: (id: string, data: { title?: string; description?: string; deadline?: string; isActive?: boolean }) => Promise<void>;
   deleteSurvey: (id: string) => Promise<void>;
-  submitSurveyResponse: (surveyId: string, userId: string, userName: string, answers: Record<string, unknown>) => Promise<void>;
+  submitSurveyResponse: (surveyId: string, userId: string, userName: string, answers: Record<string, string | string[]>) => Promise<void>;
 
   // Prayer
   prayers: Prayer[];
@@ -354,7 +354,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const submitSurveyResponse = async (surveyId: string, userId: string, userName: string, answers: Record<string, unknown>) => {
+  const submitSurveyResponse = async (surveyId: string, userId: string, userName: string, answers: Record<string, string | string[]>) => {
     // Optimistic local update
     setSurveys((prev) =>
       prev.map((survey) => {

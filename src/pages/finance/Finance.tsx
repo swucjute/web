@@ -133,7 +133,7 @@ export function Finance() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v/10000).toFixed(0)}만`} />
-                <Tooltip formatter={(value: number) => `${value.toLocaleString()}원`} />
+                <Tooltip formatter={(value) => `${Number(value).toLocaleString()}원`} />
                 <Bar dataKey="income" name="수입" fill="#10b981" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="expense" name="지출" fill="#ef4444" radius={[3, 3, 0, 0]} />
               </BarChart>
