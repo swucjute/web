@@ -131,7 +131,7 @@ interface DataContextType {
   addSurvey: (survey: Omit<Survey, 'id' | 'createdAt' | 'responses'>) => Promise<void>;
   updateSurvey: (id: string, data: { title?: string; description?: string; deadline?: string; isActive?: boolean }) => Promise<void>;
   deleteSurvey: (id: string) => Promise<void>;
-  submitSurveyResponse: (surveyId: string, userId: string, userName: string, answers: any) => Promise<void>;
+  submitSurveyResponse: (surveyId: string, userId: string, userName: string, answers: Record<string, unknown>) => Promise<void>;
 
   // Prayer
   prayers: Prayer[];
@@ -156,10 +156,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // Load non-Supabase data from localStorage (없으면 mock 데이터로 초기화)
   useEffect(() => {
-    const loadLocal = (key: string, setter: any, fallback?: any[]) => {
+    const loadLocal = <T,>(key: string, setter: React.Dispatch<React.SetStateAction<T[]>>, fallback?: T[]) => {
       const data = localStorage.getItem(key);
       if (data) {
-        setter(JSON.parse(data));
+        setter(JSON.parse(data) as T[]);
       } else if (fallback) {
         setter(fallback);
       }
@@ -174,6 +174,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // Load events - localStorage 먼저 복구 후 API로 갱신
   useEffect(() => {
     const local = localStorage.getItem('events');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (local) setEvents(JSON.parse(local));
 
     eventsApi.getAll()
@@ -353,7 +354,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const submitSurveyResponse = async (surveyId: string, userId: string, userName: string, answers: any) => {
+  const submitSurveyResponse = async (surveyId: string, userId: string, userName: string, answers: Record<string, unknown>) => {
     // Optimistic local update
     setSurveys((prev) =>
       prev.map((survey) => {
@@ -425,6 +426,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useData() {
   const context = useContext(DataContext);
   if (context === undefined) {

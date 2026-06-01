@@ -60,17 +60,15 @@ const defaultUsers: User[] = [
 ];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('currentUser');
+    return saved ? (JSON.parse(saved) as User) : null;
+  });
   const [users, setUsers] = useState<User[]>(defaultUsers); // start with defaults so login works immediately
   const [loading, setLoading] = useState(true);
 
   // Load users from Supabase on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-
     membersApi.getAll()
       .then((data) => {
         setUsers(data as User[]);
@@ -87,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (currentUser && users.length > 0) {
       const refreshed = users.find((u) => u.id === currentUser.id);
       if (refreshed && JSON.stringify(refreshed) !== JSON.stringify(currentUser)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCurrentUser(refreshed);
         localStorage.setItem('currentUser', JSON.stringify(refreshed));
       }
@@ -174,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

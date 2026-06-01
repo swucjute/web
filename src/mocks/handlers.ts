@@ -1,12 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { http, HttpResponse } from 'msw'
 import { mockUsers, mockEvents, mockPlatforms, mockSurveys } from './data'
 import type { User, Event, Platform, Survey } from '../types'
 
 // 메모리에 데이터 유지 (메모리에만 저장되고 새로고침하면 초기화)
-let users: User[] = [...mockUsers]
-let events: Event[] = [...mockEvents]
-let platforms: Platform[] = [...mockPlatforms]
-let surveys: Survey[] = [...mockSurveys]
+const users: User[] = [...mockUsers]
+const events: Event[] = [...mockEvents]
+const platforms: Platform[] = [...mockPlatforms]
+const surveys: Survey[] = [...mockSurveys]
 
 export const handlers = [
   // ============ Members API ============

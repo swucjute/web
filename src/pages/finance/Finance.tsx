@@ -68,7 +68,8 @@ export function Finance() {
   });
 
   // Chart data
-  const monthlyData = finances.reduce((acc: any, finance) => {
+  type MonthlyEntry = { month: string; income: number; expense: number };
+  const monthlyData = finances.reduce((acc: Record<string, MonthlyEntry>, finance) => {
     const month = format(new Date(finance.date), 'MM월');
     if (!acc[month]) acc[month] = { month, income: 0, expense: 0 };
     if (finance.type === 'income') acc[month].income += finance.amount;
@@ -77,7 +78,7 @@ export function Finance() {
   }, {});
 
   const chartData = Object.values(monthlyData)
-    .sort((a: any, b: any) => a.month.localeCompare(b.month))
+    .sort((a, b) => a.month.localeCompare(b.month))
     .slice(-6);
 
   return (
@@ -132,7 +133,7 @@ export function Finance() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v/10000).toFixed(0)}만`} />
-                <Tooltip formatter={(value: any) => `${value.toLocaleString()}원`} />
+                <Tooltip formatter={(value: number) => `${value.toLocaleString()}원`} />
                 <Bar dataKey="income" name="수입" fill="#10b981" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="expense" name="지출" fill="#ef4444" radius={[3, 3, 0, 0]} />
               </BarChart>
@@ -222,7 +223,7 @@ export function Finance() {
                   <Label className="text-sm">유형 *</Label>
                   <Select
                     value={formData.type}
-                    onValueChange={(value: any) => setFormData({ ...formData, type: value })}
+                    onValueChange={(value) => setFormData({ ...formData, type: value as 'income' | 'expense' })}
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />

@@ -5,14 +5,15 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Plus, Music, Search, Edit2, Trash2, ExternalLink, X, ChevronRight } from 'lucide-react';
+import type { Praise as PraiseType } from '../../types';
 
 export function Praise() {
   const { isLeader } = useAuth();
   const { praises, addPraise, updatePraise, deletePraise } = useData();
   const [isFormDrawerOpen, setIsFormDrawerOpen] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
-  const [editingPraise, setEditingPraise] = useState<any>(null);
-  const [selectedPraise, setSelectedPraise] = useState<any>(null);
+  const [editingPraise, setEditingPraise] = useState<PraiseType | null>(null);
+  const [selectedPraise, setSelectedPraise] = useState<PraiseType | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('전체');
   const [formData, setFormData] = useState({
@@ -43,7 +44,7 @@ export function Praise() {
     setIsFormDrawerOpen(false);
   };
 
-  const handleEdit = (praise: any) => {
+  const handleEdit = (praise: PraiseType) => {
     setEditingPraise(praise);
     setFormData({
       title: praise.title,

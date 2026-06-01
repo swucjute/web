@@ -97,7 +97,7 @@ export function MemberEditPage() {
   }
 
   const handleSave = () => {
-    updateUser(target.id, form as any);
+    updateUser(target.id, form);
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -194,7 +194,7 @@ export function MemberEditPage() {
                           <button
                             key={r.value}
                             type="button"
-                            onClick={() => { setForm({ ...form, role: r.value as any }); setShowRoleDropdown(false); }}
+                            onClick={() => { setForm({ ...form, role: r.value as 'admin' | 'leader' | 'member' }); setShowRoleDropdown(false); }}
                             className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors ${
                               form.role === r.value ? 'bg-blue-50' : 'hover:bg-gray-50'
                             }`}

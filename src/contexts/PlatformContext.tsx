@@ -24,6 +24,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // 구버전 데이터(status 필드) → 신버전(lifecycle + activeStates) 마이그레이션
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const migratePlatform = (p: any): Platform => {
     const participants = p.participants || [];
     const locations = [
@@ -64,6 +65,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     if (cached) {
       try {
         const migrated = JSON.parse(cached).map(migratePlatform);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPlatforms(migrated);
         localStorage.setItem('platforms', JSON.stringify(migrated));
       } catch {
@@ -76,7 +78,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
     platformsApi.getAll()
       .then((data) => {
-        const list = (data as any[]).map(migratePlatform);
+        const list = (data as unknown[]).map(migratePlatform);
         setPlatforms(list);
         localStorage.setItem('platforms', JSON.stringify(list));
       })
@@ -88,6 +90,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   const syncUpdate = async (
     optimisticFn: (prev: Platform[]) => Platform[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serverFn: () => Promise<any>,
   ) => {
     const prev = platforms;
@@ -103,7 +106,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const refreshCache = () => {
     platformsApi.getAll()
       .then((d) => {
-        const migrated = (d as any[]).map(migratePlatform);
+        const migrated = (d as unknown[]).map(migratePlatform);
         localStorage.setItem('platforms', JSON.stringify(migrated));
       })
       .catch(() => {});
@@ -235,6 +238,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePlatform() {
   const ctx = useContext(PlatformContext);
   if (!ctx) throw new Error('usePlatform must be used within PlatformProvider');

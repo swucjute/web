@@ -44,6 +44,7 @@ import { MyPlatformsPage } from './pages/more/MyPlatformsPage'
 // prayer
 import { PrayerPage } from './pages/prayer/PrayerPage'
 
+// eslint-disable-next-line react-refresh/only-export-components
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const currentUser = localStorage.getItem('currentUser')
   if (!currentUser) {

@@ -17,7 +17,7 @@ export const membersApi = {
     if (res.status === 404) return null
     return res.json()
   },
-  add: async (data: any) => {
+  add: async (data: Record<string, unknown>) => {
     const res = await fetch('/api/members', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -25,7 +25,7 @@ export const membersApi = {
     })
     return res.json()
   },
-  create: async (data: any) => {
+  create: async (data: Record<string, unknown>) => {
     const res = await fetch('/api/members', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -33,7 +33,7 @@ export const membersApi = {
     })
     return res.json()
   },
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: Record<string, unknown>) => {
     const res = await fetch(`/api/members/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -66,7 +66,7 @@ export const eventsApi = {
     if (res.status === 404) return null
     return res.json()
   },
-  add: async (data: any) => {
+  add: async (data: Record<string, unknown>) => {
     const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -74,7 +74,7 @@ export const eventsApi = {
     })
     return res.json()
   },
-  create: async (data: any) => {
+  create: async (data: Record<string, unknown>) => {
     const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -82,7 +82,7 @@ export const eventsApi = {
     })
     return res.json()
   },
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: Record<string, unknown>) => {
     const res = await fetch(`/api/events/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -115,7 +115,7 @@ export const platformsApi = {
     if (res.status === 404) return null
     return res.json()
   },
-  add: async (data: any) => {
+  add: async (data: Record<string, unknown>) => {
     const res = await fetch('/api/platforms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -123,7 +123,7 @@ export const platformsApi = {
     })
     return res.json()
   },
-  create: async (data: any) => {
+  create: async (data: Record<string, unknown>) => {
     const res = await fetch('/api/platforms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -131,7 +131,7 @@ export const platformsApi = {
     })
     return res.json()
   },
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: Record<string, unknown>) => {
     const res = await fetch(`/api/platforms/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -164,7 +164,7 @@ export const surveysApi = {
     if (res.status === 404) return null
     return res.json()
   },
-  add: async (data: any) => {
+  add: async (data: Record<string, unknown>) => {
     const res = await fetch('/api/surveys', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -172,7 +172,7 @@ export const surveysApi = {
     })
     return res.json()
   },
-  create: async (data: any) => {
+  create: async (data: Record<string, unknown>) => {
     const res = await fetch('/api/surveys', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -180,7 +180,7 @@ export const surveysApi = {
     })
     return res.json()
   },
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: Record<string, unknown>) => {
     const res = await fetch(`/api/surveys/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -196,7 +196,7 @@ export const surveysApi = {
     await fetch(`/api/surveys/${id}`, { method: 'DELETE' })
     return null
   },
-  respond: async (id: string, response: any) => {
+  respond: async (id: string, response: Record<string, unknown>) => {
     const res = await fetch(`/api/surveys/${id}/respond`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

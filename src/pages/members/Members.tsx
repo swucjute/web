@@ -216,7 +216,7 @@ export function Members() {
                   <Label className="text-sm">권한 *</Label>
                   <Select
                     value={formData.role}
-                    onValueChange={(value: any) => setFormData({ ...formData, role: value })}
+                    onValueChange={(value) => setFormData({ ...formData, role: value as 'admin' | 'leader' | 'member' })}
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
