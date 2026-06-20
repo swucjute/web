@@ -1,13 +1,14 @@
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
 import { Users, Calendar, Church, ChevronRight, Bell, ClipboardList, BookHeart } from 'lucide-react';
-import { format, endOfWeek, endOfMonth } from 'date-fns';
+import { format, endOfWeek, endOfMonth, isPast } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Link } from 'react-router';
 
 export function Dashboard() {
   const { currentUser, users } = useAuth();
   const { events, worships, surveys, prayers } = useData();
+  const activeSurveys = surveys.filter(s => s.isActive && !isPast(new Date(s.deadline)));
 
   const activeMembers = users.filter(u => u.isActive).length;
 
@@ -92,7 +93,7 @@ export function Dashboard() {
               </div>
               <ChevronRight size={14} className="text-gray-300" />
             </div>
-            <p className="text-2xl font-bold text-gray-800">{surveys.length}<span className="text-sm font-normal text-gray-500 ml-1">개</span></p>
+            <p className="text-2xl font-bold text-gray-800">{activeSurveys.length}<span className="text-sm font-normal text-gray-500 ml-1">개</span></p>
             <p className="text-xs text-gray-500 mt-0.5">진행 중 설문</p>
           </Link>
 

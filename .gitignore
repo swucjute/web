@@ -25,3 +25,7 @@ dist-ssr
 
 # claude 설정
 .claude
+
+# Playwright
+playwright-report/
+test-results/
