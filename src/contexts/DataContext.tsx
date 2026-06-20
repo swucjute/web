@@ -143,33 +143,28 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+function readLocal<T>(key: string, fallback?: T[]): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw !== null) {
+      const parsed = JSON.parse(raw) as T[];
+      // 빈 배열이고 fallback이 있으면 seed 데이터 사용
+      if (parsed.length > 0 || !fallback) return parsed;
+    }
+  } catch {}
+  return fallback ?? [];
+}
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const [finances, setFinances] = useState<FinanceRecord[]>([]);
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [finances, setFinances] = useState<FinanceRecord[]>(() => readLocal('finances'));
+  const [posts, setPosts] = useState<CommunityPost[]>(() => readLocal('posts', SEED_POSTS));
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
-  const [worships, setWorships] = useState<Worship[]>([]);
-  const [praises, setPraises] = useState<Praise[]>([]);
+  const [worships, setWorships] = useState<Worship[]>(() => readLocal('worships', mockWorships));
+  const [praises, setPraises] = useState<Praise[]>(() => readLocal('praises', mockPraises));
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [surveysLoading, setSurveysLoading] = useState(true);
-  const [prayers, setPrayers] = useState<Prayer[]>([]);
-
-  // Load non-Supabase data from localStorage (없으면 mock 데이터로 초기화)
-  useEffect(() => {
-    const loadLocal = <T,>(key: string, setter: React.Dispatch<React.SetStateAction<T[]>>, fallback?: T[]) => {
-      const data = localStorage.getItem(key);
-      if (data) {
-        setter(JSON.parse(data) as T[]);
-      } else if (fallback) {
-        setter(fallback);
-      }
-    };
-    loadLocal('finances', setFinances);
-    loadLocal('posts', setPosts, SEED_POSTS);
-    loadLocal('worships', setWorships, mockWorships);
-    loadLocal('praises', setPraises, mockPraises);
-    loadLocal('prayers', setPrayers);
-  }, []);
+  const [prayers, setPrayers] = useState<Prayer[]>(() => readLocal('prayers'));
 
   // Load events - localStorage 먼저 복구 후 API로 갱신
   useEffect(() => {
