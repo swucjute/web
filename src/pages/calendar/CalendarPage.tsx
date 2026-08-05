@@ -147,9 +147,17 @@ export function CalendarPage() {
       {/* Header */}
       <div className="bg-white px-4 pt-4 pb-3 border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-gray-800">일정 관리</h1>
-            <p className="text-xs text-gray-500">{format(currentDate, 'yyyy년 M월', { locale: ko })}</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/more')}
+              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:bg-gray-200 transition shrink-0"
+            >
+              <ChevronLeft size={18} className="text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">일정 관리</h1>
+              <p className="text-xs text-gray-500">{format(currentDate, 'yyyy년 M월', { locale: ko })}</p>
+            </div>
           </div>
           {canEdit && (
             <button

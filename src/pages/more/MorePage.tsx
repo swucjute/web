@@ -35,9 +35,9 @@ const activityItems: MenuItem[] = [
 ];
 
 const manageItems: MenuItem[] = [
-  { label: '교적 관리', icon: Users, path: '/members', color: 'text-blue-500', bg: 'bg-blue-50' },
+  { label: '교적 및 회원 관리', icon: Users, path: '/members', color: 'text-blue-500', bg: 'bg-blue-50' },
   { label: '재정 관리', icon: DollarSign, path: '/finance', color: 'text-green-500', bg: 'bg-green-50' },
-  { label: '플랫폼 관리', icon: LayoutGrid, path: '/platform/manage', color: 'text-teal-500', bg: 'bg-teal-50' },
+  { label: '플랫폼 관리', icon: LayoutGrid, path: '/more/platform-manage', color: 'text-teal-500', bg: 'bg-teal-50' },
   { label: '일정 관리', icon: Calendar, path: '/calendar', color: 'text-indigo-500', bg: 'bg-indigo-50' },
   { label: '예배 관리', icon: Church, path: '/worship/manage', color: 'text-amber-500', bg: 'bg-amber-50' },
   { label: '찬양 관리', icon: Music, path: '/praise', color: 'text-pink-500', bg: 'bg-pink-50' },

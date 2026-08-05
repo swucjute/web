@@ -8,13 +8,15 @@ import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Progress } from '../../components/ui/progress';
 import {
-  Plus, ClipboardList, X, TrendingUp, ChevronRight,
+  Plus, ClipboardList, X, TrendingUp, ChevronRight, ChevronLeft,
   Pencil, Trash2, Loader2, CheckCircle2,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { format, isPast } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 export function Survey() {
+  const navigate = useNavigate();
   const { currentUser, isAdmin, isLeader } = useAuth();
   const {
     surveys, surveysLoading,
@@ -153,9 +155,17 @@ export function Survey() {
       {/* Header */}
       <div className="bg-white px-4 pt-4 pb-3 border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-gray-800">설문 조사</h1>
-            <p className="text-xs text-gray-500">진행 중 {activeSurveys.length}개</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/more')}
+              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:bg-gray-200 transition shrink-0"
+            >
+              <ChevronLeft size={18} className="text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">설문 조사</h1>
+              <p className="text-xs text-gray-500">진행 중 {activeSurveys.length}개</p>
+            </div>
           </div>
           {canManage && (
             <button

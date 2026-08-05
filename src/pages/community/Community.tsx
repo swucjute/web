@@ -61,7 +61,7 @@ export function Community() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold text-gray-800">커뮤니티</h1>
-            <p className="text-xs text-gray-500">청년부 소통 공간</p>
+            <p className="text-xs text-gray-500">청년부 공지 및 소통 공간</p>
           </div>
           <button
             onClick={() => setIsDrawerOpen(true)}
