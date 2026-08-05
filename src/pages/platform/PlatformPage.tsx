@@ -63,7 +63,7 @@ function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () =
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <Users size={12} />
-            <span>{(platform.participants || []).length}명 참여</span>
+            <span>{(platform.participants || []).length + 1}명 참여</span>
           </div>
           <div className="flex items-center gap-0.5 text-xs text-blue-500 font-medium">
             <span>자세히</span>
