@@ -149,6 +149,72 @@ export const platformsApi = {
   },
 }
 
+// Worships API
+export const worshipsApi = {
+  getAll: async () => {
+    const res = await fetch('/api/worships')
+    return res.json()
+  },
+  getById: async (id: string) => {
+    const res = await fetch(`/api/worships/${id}`)
+    if (res.status === 404) return null
+    return res.json()
+  },
+  add: async (data: unknown) => {
+    const res = await fetch('/api/worships', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    return res.json()
+  },
+  update: async (id: string, data: unknown) => {
+    const res = await fetch(`/api/worships/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    return res.json()
+  },
+  remove: async (id: string) => {
+    await fetch(`/api/worships/${id}`, { method: 'DELETE' })
+    return null
+  },
+}
+
+// Praises API
+export const praisesApi = {
+  getAll: async () => {
+    const res = await fetch('/api/praises')
+    return res.json()
+  },
+  getById: async (id: string) => {
+    const res = await fetch(`/api/praises/${id}`)
+    if (res.status === 404) return null
+    return res.json()
+  },
+  add: async (data: unknown) => {
+    const res = await fetch('/api/praises', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    return res.json()
+  },
+  update: async (id: string, data: unknown) => {
+    const res = await fetch(`/api/praises/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    return res.json()
+  },
+  remove: async (id: string) => {
+    await fetch(`/api/praises/${id}`, { method: 'DELETE' })
+    return null
+  },
+}
+
 // Surveys API
 export const surveysApi = {
   getAll: async () => {

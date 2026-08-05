@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { http, HttpResponse } from 'msw'
-import { mockUsers, mockEvents, mockPlatforms, mockSurveys } from './data'
-import type { User, Event, Platform, Survey } from '../types'
+import { mockUsers, mockEvents, mockPlatforms, mockSurveys, mockWorships, mockPraises } from './data'
+import type { User, Event, Platform, Survey, Worship, Praise } from '../types'
 
 // 메모리에 데이터 유지 (메모리에만 저장되고 새로고침하면 초기화)
 const users: User[] = [...mockUsers]
 const events: Event[] = [...mockEvents]
 const platforms: Platform[] = [...mockPlatforms]
 const surveys: Survey[] = [...mockSurveys]
+const worships: Worship[] = [...mockWorships]
+const praises: Praise[] = [...mockPraises]
 
 export const handlers = [
   // ============ Members API ============
@@ -126,6 +128,84 @@ export const handlers = [
       return HttpResponse.json(null, { status: 404 })
     }
     platforms.splice(index, 1)
+    return HttpResponse.json(null, { status: 204 })
+  }),
+
+  // ============ Worships API ============
+  http.get('/api/worships', () => {
+    return HttpResponse.json(worships)
+  }),
+
+  http.get('/api/worships/:id', ({ params }) => {
+    const worship = worships.find((w) => w.id === params.id)
+    return worship ? HttpResponse.json(worship) : HttpResponse.json(null, { status: 404 })
+  }),
+
+  http.post('/api/worships', async ({ request }) => {
+    const body = (await request.json()) as any
+    const newWorship: Worship = {
+      ...body,
+      id: String(worships.length + 1),
+    }
+    worships.push(newWorship)
+    return HttpResponse.json(newWorship, { status: 201 })
+  }),
+
+  http.put('/api/worships/:id', async ({ params, request }) => {
+    const body = (await request.json()) as any
+    const index = worships.findIndex((w) => w.id === params.id)
+    if (index === -1) {
+      return HttpResponse.json(null, { status: 404 })
+    }
+    worships[index] = { ...worships[index], ...body }
+    return HttpResponse.json(worships[index])
+  }),
+
+  http.delete('/api/worships/:id', ({ params }) => {
+    const index = worships.findIndex((w) => w.id === params.id)
+    if (index === -1) {
+      return HttpResponse.json(null, { status: 404 })
+    }
+    worships.splice(index, 1)
+    return HttpResponse.json(null, { status: 204 })
+  }),
+
+  // ============ Praises API ============
+  http.get('/api/praises', () => {
+    return HttpResponse.json(praises)
+  }),
+
+  http.get('/api/praises/:id', ({ params }) => {
+    const praise = praises.find((p) => p.id === params.id)
+    return praise ? HttpResponse.json(praise) : HttpResponse.json(null, { status: 404 })
+  }),
+
+  http.post('/api/praises', async ({ request }) => {
+    const body = (await request.json()) as any
+    const newPraise: Praise = {
+      ...body,
+      id: String(praises.length + 1),
+    }
+    praises.push(newPraise)
+    return HttpResponse.json(newPraise, { status: 201 })
+  }),
+
+  http.put('/api/praises/:id', async ({ params, request }) => {
+    const body = (await request.json()) as any
+    const index = praises.findIndex((p) => p.id === params.id)
+    if (index === -1) {
+      return HttpResponse.json(null, { status: 404 })
+    }
+    praises[index] = { ...praises[index], ...body }
+    return HttpResponse.json(praises[index])
+  }),
+
+  http.delete('/api/praises/:id', ({ params }) => {
+    const index = praises.findIndex((p) => p.id === params.id)
+    if (index === -1) {
+      return HttpResponse.json(null, { status: 404 })
+    }
+    praises.splice(index, 1)
     return HttpResponse.json(null, { status: 204 })
   }),
 
