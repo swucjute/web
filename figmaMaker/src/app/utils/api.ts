@@ -7,16 +7,45 @@ const headers = {
   Authorization: `Bearer ${publicAnonKey}`,
 };
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: { ...headers, ...(options?.headers ?? {}) },
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`API error ${res.status}: ${err}`);
+async function request<T>(path: string, options?: RequestInit, retries = 2): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        headers: { ...headers, ...(options?.headers ?? {}) },
+      });
+
+      // Retry on 503 Service Unavailable (server initializing)
+      if (res.status === 503 && attempt < retries) {
+        console.log(`[API] Server initializing, retrying (${attempt + 1}/${retries})...`);
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        continue;
+      }
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`API error ${res.status}: ${err}`);
+      }
+
+      return res.json() as Promise<T>;
+    } catch (err) {
+      lastError = err as Error;
+      console.error(`[API] Request failed (attempt ${attempt + 1}/${retries + 1}):`, err);
+
+      // Retry on network errors
+      if (attempt < retries && (err instanceof TypeError || err.message.includes('fetch'))) {
+        console.log(`[API] Network error, retrying (${attempt + 1}/${retries})...`);
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        continue;
+      }
+
+      throw err;
+    }
   }
-  return res.json() as Promise<T>;
+
+  throw lastError || new Error('Request failed after retries');
 }
 
 // ── Members ──────────────────────────────────
@@ -54,4 +83,20 @@ export const surveysApi = {
       method: 'POST',
       body: JSON.stringify({ userId, userName, answers }),
     }),
+};
+
+// ── Worships ─────────────────────────────────
+export const worshipsApi = {
+  getAll: () => request<any[]>('/worships'),
+  add: (worship: any) => request<any>('/worships', { method: 'POST', body: JSON.stringify(worship) }),
+  update: (id: string, data: any) => request<any>(`/worships/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  remove: (id: string) => request<any>(`/worships/${id}`, { method: 'DELETE' }),
+};
+
+// ── Praises ──────────────────────────────────
+export const praisesApi = {
+  getAll: () => request<any[]>('/praises'),
+  add: (praise: any) => request<any>('/praises', { method: 'POST', body: JSON.stringify(praise) }),
+  update: (id: string, data: any) => request<any>(`/praises/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  remove: (id: string) => request<any>(`/praises/${id}`, { method: 'DELETE' }),
 };

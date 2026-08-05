@@ -4,19 +4,39 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
 import { Platform } from '../../types';
 import {
-  Plus, Users, Clock, CheckCircle2, XCircle,
-  LayoutGrid, ChevronRight, Settings2, Sparkles,
+  Plus, Users, LayoutGrid, ChevronRight,
+  Image as ImageIcon, FileText, Heart, MessageCircle, Grid3x3, MapPin,
 } from 'lucide-react';
 
-const statusMeta = {
-  pending:    { label: '승인 대기', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' },
-  recruiting: { label: '모집중',   color: 'bg-green-100 text-green-700',   dot: 'bg-green-500'  },
-  operating:  { label: '운영중',   color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500'   },
-  ended:      { label: '운영종료', color: 'bg-gray-100 text-gray-500',     dot: 'bg-gray-400'   },
-};
-
 function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () => void }) {
-  const meta = statusMeta[platform.status];
+  const lifecycleMeta = {
+    pending: { label: '승인 대기', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' },
+    active:  { label: '활성',     color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500'   },
+  };
+
+  const activeStateMeta = {
+    recruiting: { label: '모집중',   color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
+    operating:  { label: '운영중',   color: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'  },
+    ended:      { label: '운영종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
+  };
+
+  const getStatusDisplay = () => {
+    if (platform.lifecycle === 'pending') return lifecycleMeta.pending;
+
+    // active 상태: activeStates 기반으로 표시
+    const activeStates = platform.activeStates || [];
+    if (activeStates.length === 0) return lifecycleMeta.active;
+    if (activeStates.length === 1) return activeStateMeta[activeStates[0]] ?? lifecycleMeta.active;
+
+    // 여러 상태가 있으면 조합해서 표시
+    const validStates = activeStates.filter(s => activeStateMeta[s as keyof typeof activeStateMeta]);
+    if (validStates.length === 0) return lifecycleMeta.active;
+    const labels = validStates.map(s => activeStateMeta[s as keyof typeof activeStateMeta].label).join('·');
+    return { label: labels, color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' };
+  };
+
+  const meta = getStatusDisplay() ?? lifecycleMeta.active;
+
   return (
     <button
       onClick={onPress}
@@ -39,11 +59,17 @@ function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () =
       </div>
       <div className="px-4 py-3">
         <p className="font-bold text-gray-900 text-sm mb-1 line-clamp-1">{platform.title}</p>
-        <p className="text-xs text-gray-500 line-clamp-1 mb-2">{platform.scheduledDate}</p>
+        <div className="space-y-0.5 mb-2">
+          <p className="text-xs text-gray-500 line-clamp-1">{platform.scheduledDate}</p>
+          <div className="flex items-center gap-1 text-xs text-gray-400">
+            <MapPin size={11} />
+            <span className="line-clamp-1">{platform.location}</span>
+          </div>
+        </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <Users size={12} />
-            <span>{platform.participants.length}명 참여</span>
+            <span>{(platform.participants || []).length + 1}명 참여</span>
           </div>
           <div className="flex items-center gap-0.5 text-xs text-blue-500 font-medium">
             <span>자세히</span>
@@ -64,26 +90,34 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
-type TabKey = 'recruiting' | 'operating' | 'ended' | 'manage';
+type TabKey = 'recruiting' | 'operating' | 'ended' | 'activity';
 
 export function PlatformPage() {
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser } = useAuth();
   const { platforms } = usePlatform();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>('recruiting');
+  const [activityView, setActivityView] = useState<'grid' | 'detail'>('grid');
 
   const isYouthMember = currentUser?.department === '청년부';
 
-  const recruiting = platforms.filter((p) => p.status === 'recruiting');
-  const operating  = platforms.filter((p) => p.status === 'operating');
-  const ended      = platforms.filter((p) => p.status === 'ended');
-  const pending    = platforms.filter((p) => p.status === 'pending');
+  const recruiting = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('recruiting'));
+  const operating  = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('operating'));
+  const ended      = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('ended'));
+
+  // Sample activity data
+  const allActivities = [
+    { id: 1, platformTitle: '청년 독서 모임', author: '김민수', date: '2024.05.10', content: '오늘 첫 모임을 가졌습니다! 다들 열정이 넘치시네요.', hasImage: true, likes: 12, comments: 3 },
+    { id: 2, platformTitle: '청년 독서 모임', author: '이서연', date: '2024.05.08', content: '준비 회의를 진행했어요.', hasImage: false, likes: 8, comments: 2 },
+    { id: 3, platformTitle: '청년 배드민턴', author: '박지훈', date: '2024.05.05', content: '장소 섭외 완료했습니다.', hasImage: true, likes: 15, comments: 5 },
+    { id: 4, platformTitle: '청년 봉사 모임', author: '최유진', date: '2024.05.01', content: '플랫폼이 승인되었습니다!', hasImage: false, likes: 20, comments: 7 },
+  ];
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'recruiting', label: '모집중',  count: recruiting.length },
     { key: 'operating',  label: '운영중',  count: operating.length  },
     { key: 'ended',      label: '종료',    count: ended.length      },
-    ...(isAdmin() ? [{ key: 'manage' as TabKey, label: '관리', count: pending.length }] : []),
+    { key: 'activity',   label: '활동',    count: allActivities.length },
   ];
 
   const renderList = (list: Platform[]) => {
@@ -119,28 +153,28 @@ export function PlatformPage() {
 
         {/* Tabs */}
         <div className="flex gap-1">
-          {tabs.map((tab) => {
-            if (tab.key === 'manage' && !isAdmin()) return null;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
-                  activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400'
-                }`}
-              >
-                {tab.key === 'manage' && <Settings2 size={12} />}
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    activeTab === tab.key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+                tab.key === 'activity'
+                  ? (activeTab === tab.key ? 'border-purple-600 text-purple-600' : 'border-transparent text-purple-400')
+                  : (activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400')
+              }`}
+            >
+              {tab.label}
+              {tab.count !== undefined && tab.count > 0 && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  tab.key === 'activity'
+                    ? (activeTab === tab.key ? 'bg-purple-100 text-purple-600' : 'bg-purple-50 text-purple-500')
+                    : (activeTab === tab.key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500')
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -149,111 +183,82 @@ export function PlatformPage() {
         {activeTab === 'recruiting' && renderList(recruiting)}
         {activeTab === 'operating'  && renderList(operating)}
         {activeTab === 'ended'      && renderList(ended)}
-        {activeTab === 'manage' && isAdmin() && <ManageTab pending={pending} />}
-      </div>
-    </div>
-  );
-}
-
-/* ── Admin Manage Tab ── */
-function ManageTab({ pending }: { pending: Platform[] }) {
-  const navigate = useNavigate();
-  const { approvePlatform, rejectPlatform, changeStatus, platforms } = usePlatform();
-  const [rejectId, setRejectId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-
-  const all = platforms.filter((p) => p.status !== 'pending');
-
-  const handleReject = () => {
-    if (rejectId) {
-      rejectPlatform(rejectId, rejectReason);
-      setRejectId(null);
-      setRejectReason('');
-    }
-  };
-
-  return (
-    <div className="space-y-5">
-      {/* Pending */}
-      <div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">승인 대기 ({pending.length})</p>
-        {pending.length === 0 ? (
-          <div className="bg-white rounded-2xl px-4 py-8 text-center text-gray-300 text-sm border border-gray-100">대기 중인 제안이 없습니다</div>
-        ) : (
-          <div className="space-y-3">
-            {pending.map((p) => (
-              <div key={p.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <p className="font-bold text-gray-800 text-sm">{p.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">제안자: {p.proposedByName}</p>
-                  </div>
-                  <button onClick={() => navigate(`/platform/${p.id}`)} className="text-xs text-blue-500 font-medium shrink-0">상세보기</button>
-                </div>
-                <p className="text-xs text-gray-500 mb-3 line-clamp-2">{p.content}</p>
-                <div className="flex gap-2">
-                  <button onClick={() => approvePlatform(p.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-green-50 text-green-600 text-xs font-semibold active:bg-green-100 transition">
-                    <CheckCircle2 size={13} />승인
-                  </button>
-                  <button onClick={() => setRejectId(p.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-semibold active:bg-red-100 transition">
-                    <XCircle size={13} />반려
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Status control */}
-      <div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">플랫폼 상태 관리</p>
-        <div className="space-y-3">
-          {all.map((p) => (
-            <div key={p.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="font-bold text-gray-800 text-sm">{p.title}</p>
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full mt-1 ${statusMeta[p.status].color}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${statusMeta[p.status].dot}`} />
-                    {statusMeta[p.status].label}
-                  </span>
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <button onClick={() => navigate(`/platform/${p.id}`)} className="flex items-center gap-0.5 text-xs text-blue-500 font-semibold">
-                    자세히<ChevronRight size={12} />
-                  </button>
-                  <div className="flex items-center gap-1 text-xs text-gray-400">
-                    <Users size={12} />{p.participants.length}명
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-1.5 flex-wrap">
-                {(['recruiting', 'operating', 'ended'] as const).map((s) => (
-                  <button key={s} onClick={() => changeStatus(p.id, s)} className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${p.status === s ? `${statusMeta[s].color} ring-1 ring-inset ring-current` : 'bg-gray-100 text-gray-500'}`}>
-                    {statusMeta[s].label}
+        {activeTab === 'activity'   && (
+          <>
+            {activityView === 'grid' ? (
+              <div className="grid grid-cols-3 gap-1">
+                {allActivities.map((activity) => (
+                  <button
+                    key={activity.id}
+                    onClick={() => setActivityView('detail')}
+                    className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center hover:opacity-80 transition"
+                  >
+                    {activity.hasImage ? (
+                      <ImageIcon size={32} strokeWidth={1} className="text-blue-200" />
+                    ) : (
+                      <FileText size={32} strokeWidth={1} className="text-blue-200" />
+                    )}
                   </button>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Back to grid button */}
+                <button
+                  onClick={() => setActivityView('grid')}
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition"
+                >
+                  <Grid3x3 size={16} />
+                  <span>그리드로 보기</span>
+                </button>
 
-      {/* Reject modal */}
-      {rejectId && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ maxWidth: 430, margin: '0 auto', left: 0, right: 0 }}>
-          <div className="absolute inset-0 bg-black/40" onClick={() => setRejectId(null)} />
-          <div className="relative w-full bg-white rounded-t-3xl p-5 z-10">
-            <p className="font-bold text-gray-800 mb-3">반려 사유 입력</p>
-            <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="반려 사유를 입력하세요..." rows={3} className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none" />
-            <div className="flex gap-3 mt-3">
-              <button onClick={() => setRejectId(null)} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium">취소</button>
-              <button onClick={handleReject} className="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-semibold">반려하기</button>
-            </div>
-          </div>
-        </div>
-      )}
+                {/* Activity Detail Feed */}
+                {allActivities.map((activity) => (
+                  <div key={activity.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    {/* Platform & Author Info */}
+                    <div className="px-4 py-3">
+                      <span className="inline-block text-[11px] text-blue-700 font-semibold bg-blue-100 px-2.5 py-1 rounded-full mb-2">{activity.platformTitle}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <span className="text-blue-600 text-sm font-semibold">{activity.author.charAt(0)}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-900">{activity.author}</p>
+                          <p className="text-xs text-gray-400">{activity.date}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Image Placeholder */}
+                    {activity.hasImage && (
+                      <div className="w-full aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                        <ImageIcon size={48} strokeWidth={1} className="text-blue-200" />
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    <div className="px-4 py-3">
+                      <p className="text-sm text-gray-700 leading-relaxed">{activity.content}</p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-4 px-4 pb-3">
+                      <button className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 transition">
+                        <Heart size={18} />
+                        <span className="text-xs font-medium">{activity.likes}</span>
+                      </button>
+                      <button className="flex items-center gap-1.5 text-gray-400 hover:text-blue-500 transition">
+                        <MessageCircle size={18} />
+                        <span className="text-xs font-medium">{activity.comments}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

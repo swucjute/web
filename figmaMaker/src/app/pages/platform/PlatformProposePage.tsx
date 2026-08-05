@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
 import {
   ArrowLeft, Type, Clock, FileText, Target,
-  StickyNote, ImagePlus, X, Send, CheckCircle2,
+  StickyNote, ImagePlus, X, Send, CheckCircle2, MapPin,
 } from 'lucide-react';
 
 const inputBase =
@@ -34,7 +34,7 @@ export function PlatformProposePage() {
   const { currentUser } = useAuth();
   const { addPlatform } = usePlatform();
 
-  const [form, setForm] = useState({ title: '', scheduledDate: '', content: '', purpose: '', other: '' });
+  const [form, setForm] = useState({ title: '', scheduledDate: '', location: '', content: '', purpose: '', other: '' });
   const [posterFile, setPosterFile] = useState<string>('');
   const [posterPreview, setPosterPreview] = useState<string>('');
   const [submitted, setSubmitted] = useState(false);
@@ -60,6 +60,7 @@ export function PlatformProposePage() {
     addPlatform({
       title: form.title,
       scheduledDate: form.scheduledDate,
+      location: form.location,
       content: form.content,
       purpose: form.purpose,
       other: form.other,
@@ -147,6 +148,9 @@ export function PlatformProposePage() {
           </Field>
           <Field label="일시" required icon={<Clock size={12} />}>
             <input type="text" value={form.scheduledDate} onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })} placeholder="예) 매주 토요일 오전 10:00" required className={inputBase} />
+          </Field>
+          <Field label="장소" required icon={<MapPin size={12} />}>
+            <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="예) 교회 소그룹실" required className={inputBase} />
           </Field>
         </div>
 
