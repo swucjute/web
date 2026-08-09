@@ -3,7 +3,7 @@ import { Layout } from './components/Layout'
 
 // auth
 import { Login } from './pages/auth/Login'
-import { KakaoAuthPage } from './pages/auth/KakaoAuthPage'
+import { KakaoCallbackPage } from './pages/auth/KakaoCallbackPage'
 import { SignupPage } from './pages/auth/SignupPage'
 import { ChurchRegisterRequestPage } from './pages/auth/ChurchRegisterRequestPage'
 import { PendingApprovalPage } from './pages/auth/PendingApprovalPage'
@@ -75,8 +75,8 @@ export const router = createBrowserRouter([
     element: <Login />,
   },
   {
-    path: '/kakao-auth',
-    element: <KakaoAuthPage />,
+    path: '/auth/kakao/callback',
+    element: <KakaoCallbackPage />,
   },
   {
     path: '/signup',

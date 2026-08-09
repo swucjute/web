@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { startKakaoLogin } from '../../utils/authClient';
 import { Church, Eye, EyeOff, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 export function Login() {
@@ -12,6 +13,8 @@ export function Login() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const kakaoError = searchParams.get('error') === 'kakao_login_failed';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +52,17 @@ export function Login() {
 
         {/* Bottom CTA */}
         <div className="px-6 pb-14 space-y-3">
+          {kakaoError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <p className="text-sm text-red-600 text-center">
+                카카오 로그인에 실패했습니다. 다시 시도해주세요.
+              </p>
+            </div>
+          )}
           {/* 카카오 로그인 버튼 */}
           <button
             type="button"
-            onClick={() => navigate('/kakao-auth')}
+            onClick={startKakaoLogin}
             className="w-full py-3.5 rounded-xl font-semibold text-sm text-gray-800 flex items-center justify-center gap-2"
             style={{ backgroundColor: '#F7E600' }}
           >

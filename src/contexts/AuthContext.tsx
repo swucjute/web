@@ -1,13 +1,41 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { User } from '../types';
+import type { User, UserRole } from '../types';
 import { membersApi } from '../utils/api';
 import { useCrudQuery } from '../hooks/useCrudQuery';
+import { clearTokens, logoutRequest, type MemberMeResponse, type MemberRole } from '../utils/authClient';
+
+const MEMBER_ROLE_MAP: Record<MemberRole, UserRole> = {
+  ADMIN: 'admin',
+  MANAGER: 'admin',
+  LEADER: 'leader',
+  USER: 'member',
+};
+
+function memberToUser(member: MemberMeResponse): User {
+  return {
+    id: String(member.memberId),
+    name: member.profile?.name ?? '',
+    email: member.email ?? '',
+    password: '',
+    role: MEMBER_ROLE_MAP[member.role],
+    phone: member.profile?.phoneNumber ?? '',
+    birthDate: member.profile?.birthDate ?? '',
+    joinDate: '',
+    department: member.profile?.department ?? '',
+    position: member.profile?.position ?? undefined,
+    bank: member.profile?.bankName ?? undefined,
+    accountNumber: member.profile?.accountNumber ?? undefined,
+    isActive: member.status === 'ACTIVE',
+    isPending: member.status !== 'ACTIVE',
+  };
+}
 
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
   loading: boolean;
   login: (email: string, password: string) => boolean;
+  loginWithMember: (member: MemberMeResponse) => void;
   logout: () => void;
   isAdmin: () => boolean;
   isLeader: () => boolean;
@@ -117,10 +145,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  const loginWithMember = (member: MemberMeResponse) => {
+    const user = memberToUser(member);
+    setCurrentUser(user);
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  };
+
   const logout = () => {
+    const token = localStorage.getItem('accessToken');
+    const isRealSession = !!token && !token.startsWith('mock-token-');
+
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
-    localStorage.removeItem('accessToken');
+
+    // logoutRequest() reads the refreshToken before clearing it, so only
+    // call clearTokens() directly for the mock session (no server call needed).
+    if (isRealSession) {
+      logoutRequest().catch((err) => console.error('[AuthContext] Failed to log out:', err));
+    } else {
+      clearTokens();
+    }
   };
 
   const isAdmin = () => currentUser?.role === 'admin';
@@ -160,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         users,
         loading,
         login,
+        loginWithMember,
         logout,
         isAdmin,
         isLeader,
