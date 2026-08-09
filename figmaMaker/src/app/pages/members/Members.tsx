@@ -5,7 +5,7 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { User } from '../../types';
 import { format } from 'date-fns';
-import { Search, Plus, Edit2, Trash2, X, Users, Phone, Calendar, Shield } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Users, Phone, Calendar, Shield, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 export function Members() {
@@ -99,9 +99,17 @@ export function Members() {
       {/* Page Header */}
       <div className="bg-white px-4 pt-4 pb-3 border-b border-gray-100">
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-lg font-bold text-gray-800">교적 관리</h1>
-            <p className="text-xs text-gray-500">총 {filteredUsers.length}명</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/more')}
+              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:bg-gray-200 transition shrink-0"
+            >
+              <ChevronLeft size={18} className="text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">교적 관리</h1>
+              <p className="text-xs text-gray-500">총 {filteredUsers.length}명</p>
+            </div>
           </div>
           {canEdit && (
             <button

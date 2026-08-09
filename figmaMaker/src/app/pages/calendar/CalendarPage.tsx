@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
 import { Input } from '../../components/ui/input';
@@ -30,9 +31,58 @@ const eventTypeLabels: Record<string, string> = {
   other: '기타',
 };
 
+const categoryDotColors: Record<string, string> = {
+  예배: 'bg-purple-400',
+  공지: 'bg-blue-400',
+  전도: 'bg-green-400',
+  행사: 'bg-orange-400',
+};
+
+const categoryBadgeColors: Record<string, string> = {
+  예배: 'bg-purple-50 text-purple-700 border-purple-200',
+  공지: 'bg-blue-50 text-blue-700 border-blue-200',
+  전도: 'bg-green-50 text-green-700 border-green-200',
+  행사: 'bg-orange-50 text-orange-700 border-orange-200',
+};
+
+type CalendarEvent = {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  type: string;
+  createdBy: string;
+  source: 'event' | 'community';
+  postId?: string;
+  category?: string;
+};
+
 export function CalendarPage() {
+  const navigate = useNavigate();
   const { isLeader } = useAuth();
-  const { events, addEvent, deleteEvent } = useData();
+  const { events, addEvent, deleteEvent, posts } = useData();
+
+  const allEvents = useMemo<CalendarEvent[]>(() => {
+    const communityEvents: CalendarEvent[] = posts
+      .filter((p) => !!p.date)
+      .map((p) => ({
+        id: `community-${p.id}`,
+        title: p.title,
+        description: p.content,
+        date: p.date!,
+        time: '',
+        location: p.location || '',
+        type: 'community',
+        createdBy: p.author,
+        source: 'community' as const,
+        postId: p.id,
+        category: p.category,
+      }));
+    const regularEvents: CalendarEvent[] = events.map((e) => ({ ...e, source: 'event' as const }));
+    return [...regularEvents, ...communityEvents];
+  }, [events, posts]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -78,10 +128,10 @@ export function CalendarPage() {
   };
 
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => isSameDay(new Date(event.date), date));
+    return allEvents.filter(event => isSameDay(new Date(event.date), date));
   };
 
-  const upcomingEvents = events
+  const upcomingEvents = allEvents
     .filter(e => new Date(e.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 5);
@@ -93,9 +143,17 @@ export function CalendarPage() {
       {/* Header */}
       <div className="bg-white px-4 pt-4 pb-3 border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-gray-800">일정 관리</h1>
-            <p className="text-xs text-gray-500">{format(currentDate, 'yyyy년 M월', { locale: ko })}</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/more')}
+              className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:bg-gray-200 transition shrink-0"
+            >
+              <ChevronLeft size={18} className="text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">일정 관리</h1>
+              <p className="text-xs text-gray-500">{format(currentDate, 'yyyy년 M월', { locale: ko })}</p>
+            </div>
           </div>
           {canEdit && (
             <button
@@ -187,7 +245,11 @@ export function CalendarPage() {
                     {dayEvents.slice(0, 2).map(event => (
                       <div
                         key={event.id}
-                        className={`h-1.5 rounded-full ${eventTypeColors[event.type] || 'bg-gray-400'}`}
+                        className={`h-1.5 rounded-full ${
+                          event.source === 'community' && event.category
+                            ? categoryDotColors[event.category] || 'bg-gray-400'
+                            : eventTypeColors[event.type] || 'bg-gray-400'
+                        }`}
                       />
                     ))}
                     {dayEvents.length > 2 && (
@@ -217,34 +279,44 @@ export function CalendarPage() {
                 {selectedDateEvents.map((event, idx) => (
                   <div
                     key={event.id}
-                    className={`px-4 py-3.5 ${idx < selectedDateEvents.length - 1 ? 'border-b border-gray-50' : ''}`}
+                    onClick={() => event.source === 'community' && event.postId && navigate(`/community/${event.postId}`)}
+                    className={`px-4 py-3.5 ${idx < selectedDateEvents.length - 1 ? 'border-b border-gray-50' : ''} ${event.source === 'community' ? 'cursor-pointer active:bg-gray-50' : ''}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${eventTypeColors[event.type]}`} />
+                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                        event.source === 'community' && event.category
+                          ? categoryDotColors[event.category] || 'bg-gray-400'
+                          : eventTypeColors[event.type] || 'bg-gray-400'
+                      }`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-xs px-2 py-0.5 rounded-full border ${eventTypeBgColors[event.type]}`}>
-                            {eventTypeLabels[event.type]}
+                          <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                            event.source === 'community' && event.category
+                              ? categoryBadgeColors[event.category] || 'bg-gray-50 text-gray-600 border-gray-200'
+                              : eventTypeBgColors[event.type] || 'bg-gray-50 text-gray-600 border-gray-200'
+                          }`}>
+                            {event.source === 'community' && event.category ? event.category : eventTypeLabels[event.type] || event.type}
                           </span>
                         </div>
                         <p className="font-medium text-gray-800 text-sm">{event.title}</p>
                         <div className="flex items-center gap-3 mt-1">
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <Clock size={11} />
-                            <span>{event.time}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <MapPin size={11} />
-                            <span>{event.location}</span>
-                          </div>
+                          {event.time && (
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock size={11} />
+                              <span>{event.time}</span>
+                            </div>
+                          )}
+                          {event.location && (
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <MapPin size={11} />
+                              <span>{event.location}</span>
+                            </div>
+                          )}
                         </div>
-                        {event.description && (
-                          <p className="text-xs text-gray-500 mt-1">{event.description}</p>
-                        )}
                       </div>
-                      {canEdit && (
+                      {canEdit && event.source === 'event' && (
                         <button
-                          onClick={() => handleDelete(event.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(event.id); }}
                           className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400 shrink-0"
                         >
                           <Trash2 size={13} />
@@ -273,23 +345,30 @@ export function CalendarPage() {
               {upcomingEvents.map((event, idx) => (
                 <div
                   key={event.id}
-                  className={`flex items-center gap-3 px-4 py-3.5 ${idx < upcomingEvents.length - 1 ? 'border-b border-gray-50' : ''}`}
+                  onClick={() => event.source === 'community' && event.postId && navigate(`/community/${event.postId}`)}
+                  className={`flex items-center gap-3 px-4 py-3.5 ${idx < upcomingEvents.length - 1 ? 'border-b border-gray-50' : ''} ${event.source === 'community' ? 'cursor-pointer active:bg-gray-50' : ''}`}
                 >
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${eventTypeColors[event.type]}`} />
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                    event.source === 'community' && event.category
+                      ? categoryDotColors[event.category] || 'bg-gray-400'
+                      : eventTypeColors[event.type] || 'bg-gray-400'
+                  }`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{event.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-xs text-gray-500">
-                        {format(new Date(event.date), 'M월 d일 (E)', { locale: ko })} {event.time}
-                      </p>
-                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {format(new Date(event.date), 'M월 d일 (E)', { locale: ko })}{event.time ? ` ${event.time}` : ''}
+                    </p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${eventTypeBgColors[event.type]}`}>
-                    {eventTypeLabels[event.type]}
+                  <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${
+                    event.source === 'community' && event.category
+                      ? categoryBadgeColors[event.category] || 'bg-gray-50 text-gray-600 border-gray-200'
+                      : eventTypeBgColors[event.type] || 'bg-gray-50 text-gray-600 border-gray-200'
+                  }`}>
+                    {event.source === 'community' && event.category ? event.category : eventTypeLabels[event.type] || event.type}
                   </span>
-                  {canEdit && (
+                  {canEdit && event.source === 'event' && (
                     <button
-                      onClick={() => handleDelete(event.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(event.id); }}
                       className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400 shrink-0"
                     >
                       <Trash2 size={13} />

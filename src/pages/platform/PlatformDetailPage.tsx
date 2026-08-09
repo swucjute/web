@@ -5,8 +5,8 @@ import { usePlatform } from '../../contexts/PlatformContext';
 import {
   ArrowLeft, Users, Clock, FileText, Target, StickyNote,
   UserCheck, UserMinus, LayoutGrid, Pencil,
-  CheckCircle2, XCircle, ChevronDown, ChevronUp,
-  Heart, MessageCircle, Image as ImageIcon, Grid3x3, MapPin,
+  CheckCircle2, XCircle, Heart, MessageCircle, Image as ImageIcon, Grid3x3, MapPin,
+  Check, X as XIcon, UserX,
 } from 'lucide-react';
 
 const lifecycleMeta = {
@@ -30,16 +30,25 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
   );
 }
 
+const sampleActivities = [
+  { id: 1, author: '김민수', date: '2024.05.10', content: '오늘 첫 모임을 가졌습니다! 다들 열정이 넘치시네요 🔥', hasImage: true, likes: 12, comments: 3 },
+  { id: 2, author: '이서연', date: '2024.05.08', content: '준비 회의를 진행했어요. 다음 주 활동 계획을 세웠습니다!', hasImage: false, likes: 8, comments: 2 },
+  { id: 3, author: '박지훈', date: '2024.05.05', content: '장소 섭외 완료했습니다 👍', hasImage: true, likes: 15, comments: 5 },
+  { id: 4, author: '최유진', date: '2024.05.01', content: '플랫폼이 승인되었습니다! 많이 참여해주세요 😊', hasImage: false, likes: 20, comments: 7 },
+];
+
 export function PlatformDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser, isAdmin, users } = useAuth();
-  const { getPlatformById, joinPlatform, leavePlatform, approvePlatform, rejectPlatform } = usePlatform();
+  const {
+    getPlatformById, joinPlatform, leavePlatform, approvePlatform, rejectPlatform,
+    approveParticipant, rejectParticipant, removeParticipant,
+  } = usePlatform();
 
   const platform = getPlatformById(id ?? '');
   const [activeTab, setActiveTab] = useState<'info' | 'activity'>('info');
   const [activityView, setActivityView] = useState<'grid' | 'detail'>('grid');
-  const [showMembers, setShowMembers] = useState(false);
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [joinAnim, setJoinAnim] = useState(false);
@@ -56,10 +65,16 @@ export function PlatformDetailPage() {
 
   const getStatusDisplay = () => {
     if (platform.lifecycle === 'pending') return lifecycleMeta.pending;
+
+    // active 상태: activeStates 기반으로 표시
     const activeStates = platform.activeStates || [];
     if (activeStates.length === 0) return lifecycleMeta.active;
-    if (activeStates.length === 1) return activeStateMeta[activeStates[0]];
-    const labels = activeStates.map((s) => activeStateMeta[s].label).join('·');
+    if (activeStates.length === 1) return activeStateMeta[activeStates[0]] ?? lifecycleMeta.active;
+
+    // 여러 상태가 있으면 조합해서 표시
+    const validStates = activeStates.filter((s) => activeStateMeta[s]);
+    if (validStates.length === 0) return lifecycleMeta.active;
+    const labels = validStates.map((s) => activeStateMeta[s].label).join('·');
     return { label: labels, color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' };
   };
 
@@ -70,7 +85,12 @@ export function PlatformDetailPage() {
   const isProposer = currentUser?.id === platform.proposedBy;
   const isRecruiting = platform.lifecycle === 'active' && (platform.activeStates || []).includes('recruiting');
 
+  const pendingParticipants = platform.pendingParticipants || [];
+  const isPendingParticipant = currentUser ? pendingParticipants.includes(currentUser.id) : false;
+  const canSeeParticipants = isProposer || isAdmin();
+
   const participantUsers = users.filter((u) => participants.includes(u.id));
+  const pendingUsers = users.filter((u) => pendingParticipants.includes(u.id));
 
   const handleJoin = () => {
     if (!currentUser) return;
@@ -91,13 +111,6 @@ export function PlatformDetailPage() {
     navigate(-1);
   };
 
-  const sampleActivities = [
-    { id: 1, author: '김민수', date: '2024.05.10', content: '오늘 첫 모임을 가졌습니다! 다들 열정이 넘치시네요 🔥', hasImage: true, likes: 12, comments: 3 },
-    { id: 2, author: '이서연', date: '2024.05.08', content: '준비 회의를 진행했어요. 다음 주 활동 계획을 세웠습니다!', hasImage: false, likes: 8, comments: 2 },
-    { id: 3, author: '박지훈', date: '2024.05.05', content: '장소 섭외 완료했습니다 👍', hasImage: true, likes: 15, comments: 5 },
-    { id: 4, author: '최유진', date: '2024.05.01', content: '플랫폼이 승인되었습니다! 많이 참여해주세요 😊', hasImage: false, likes: 20, comments: 7 },
-  ];
-
   return (
     <div className="flex flex-col min-h-full bg-gray-50">
       {/* Header */}
@@ -116,7 +129,7 @@ export function PlatformDetailPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* 포스터 */}
+        {/* Poster */}
         <div className="w-full bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center relative" style={{ aspectRatio: '3/4', maxHeight: 340 }}>
           {platform.posterUrl ? (
             <img src={platform.posterUrl} alt="모집 포스터" className="w-full h-full object-cover" />
@@ -133,42 +146,50 @@ export function PlatformDetailPage() {
         </div>
 
         <div className="flex flex-col">
-          {/* 제목 */}
+          {/* Title */}
           <div className="px-4 pt-4 pb-3">
             <h2 className="text-xl font-bold text-gray-900 leading-tight">{platform.title}</h2>
             <p className="text-xs text-gray-400 mt-1">
-              제안자: {platform.proposedByName} · {new Date(platform.createdAt).toLocaleDateString('ko-KR')}
+              플짱(제안자): {platform.proposedByName} · {new Date(platform.createdAt).toLocaleDateString('ko-KR')}
             </p>
           </div>
 
-          {/* 탭 메뉴 */}
+          {/* Tab Menu */}
           <div className="flex border-b border-gray-200 bg-white sticky top-14 z-10">
             <button
               onClick={() => setActiveTab('info')}
-              className={`flex-1 py-3 text-sm font-semibold transition relative ${activeTab === 'info' ? 'text-gray-900' : 'text-gray-400'}`}
+              className={`flex-1 py-3 text-sm font-semibold transition relative ${
+                activeTab === 'info' ? 'text-gray-900' : 'text-gray-400'
+              }`}
             >
               정보
-              {activeTab === 'info' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />}
+              {activeTab === 'info' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />
+              )}
             </button>
             <button
               onClick={() => setActiveTab('activity')}
-              className={`flex-1 py-3 text-sm font-semibold transition relative ${activeTab === 'activity' ? 'text-purple-600' : 'text-purple-400'}`}
+              className={`flex-1 py-3 text-sm font-semibold transition relative ${
+                activeTab === 'activity' ? 'text-purple-600' : 'text-purple-400'
+              }`}
             >
               <span className="flex items-center justify-center gap-1">
                 활동
-                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${activeTab === 'activity' ? 'bg-purple-100 text-purple-600' : 'bg-purple-50 text-purple-500'}`}>
-                  {sampleActivities.length}
-                </span>
+                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  activeTab === 'activity' ? 'bg-purple-100 text-purple-600' : 'bg-purple-50 text-purple-500'
+                }`}>{sampleActivities.length}</span>
               </span>
-              {activeTab === 'activity' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600" />}
+              {activeTab === 'activity' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600" />
+              )}
             </button>
           </div>
 
-          {/* 탭 콘텐츠 */}
+          {/* Tab Content */}
           <div className="px-4 py-3 space-y-3">
             {activeTab === 'info' ? (
               <>
-                {/* 반려 사유 */}
+                {/* Rejection notice */}
                 {platform.rejectedReason && (
                   <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-xs text-red-600">
                     <p className="font-semibold mb-0.5">반려 사유</p>
@@ -176,7 +197,7 @@ export function PlatformDetailPage() {
                   </div>
                 )}
 
-                {/* 기본 정보 */}
+                {/* Info Cards - Combined with Details */}
                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-50">
                   <InfoRow icon={<Clock size={14} className="text-blue-400" />} label="일시" value={platform.scheduledDate} />
                   <InfoRow icon={<MapPin size={14} className="text-green-400" />} label="장소" value={platform.location} />
@@ -185,9 +206,7 @@ export function PlatformDetailPage() {
                     <span className="text-xs text-gray-400 w-16 shrink-0">모집 인원</span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-800 font-medium">미정</span>
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                        현재 {participants.length}명 참여중
-                      </span>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">현재 {participants.length + 1}명 참여중</span>
                     </div>
                   </div>
 
@@ -218,52 +237,119 @@ export function PlatformDetailPage() {
                   )}
                 </div>
 
-                {/* 참여 멤버 */}
-                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                  <button onClick={() => setShowMembers(!showMembers)} className="w-full flex items-center justify-between px-4 py-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <Users size={15} className="text-blue-400" />
-                      참여 멤버 ({participants.length})
-                    </div>
-                    {showMembers ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-                  </button>
-                  {showMembers && (
-                    <div className="border-t border-gray-50 px-4 py-3 space-y-2">
-                      {participantUsers.length === 0 ? (
-                        <p className="text-xs text-gray-400 py-2 text-center">참여자가 없습니다</p>
-                      ) : (
-                        participantUsers.map((u) => (
-                          <div key={u.id} className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                              <span className="text-blue-600 text-xs font-semibold">{u.name.charAt(0)}</span>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-800">{u.name}</p>
-                              <p className="text-[11px] text-gray-400">{u.position || u.department}</p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* 참여/취소 버튼 */}
+                {/* Join / Leave */}
                 {isRecruiting && isYouthMember && (
                   <div>
                     {isParticipant ? (
                       <button onClick={handleLeave} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gray-100 text-gray-600 font-bold text-sm active:bg-gray-200 transition">
                         <UserMinus size={16} />참여 취소하기
                       </button>
+                    ) : isPendingParticipant ? (
+                      <div className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 font-bold text-sm">
+                        <Clock size={16} />승인 대기중
+                      </div>
                     ) : (
                       <button onClick={handleJoin} className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition ${joinAnim ? 'bg-green-500 text-white' : 'bg-blue-600 text-white active:bg-blue-700'}`}>
-                        {joinAnim ? <><CheckCircle2 size={16} />참여 완료!</> : <><UserCheck size={16} />참여하기</>}
+                        {joinAnim ? <><CheckCircle2 size={16} />신청 완료!</> : <><UserCheck size={16} />참여하기</>}
                       </button>
                     )}
                   </div>
                 )}
 
-                {/* 관리자 승인/반려 */}
+                {/* 참여자 현황 — 플짱/관리자만 표시 */}
+                {canSeeParticipants && (
+                  <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    {/* 헤더 */}
+                    <div className="flex items-center gap-2 px-4 py-3.5 border-b border-gray-100">
+                      <Users size={15} className="text-blue-500" />
+                      <span className="text-sm font-semibold text-gray-800">플랫폼 참여 현황</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                        {participants.length + 1}명 참여
+                      </span>
+                      {pendingParticipants.length > 0 && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600">
+                          {pendingParticipants.length}명 대기
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 신청 대기 */}
+                    {pendingUsers.length > 0 && (
+                      <div className="px-4 py-3 space-y-2">
+                        <p className="text-[11px] font-bold text-amber-500 tracking-wider">신청 대기</p>
+                        {pendingUsers.map((u) => (
+                          <div key={u.id} className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                              <span className="text-amber-600 text-xs font-bold">{u.name.charAt(0)}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{u.name}</p>
+                              <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                            </div>
+                            <div className="flex gap-1.5 shrink-0">
+                              <button
+                                onClick={() => approveParticipant(platform.id, u.id)}
+                                className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center active:bg-blue-700 transition"
+                              >
+                                <Check size={14} className="text-white" />
+                              </button>
+                              <button
+                                onClick={() => rejectParticipant(platform.id, u.id)}
+                                className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center active:bg-gray-200 transition"
+                              >
+                                <XIcon size={14} className="text-gray-500" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 플짱(제안자) */}
+                    <div className="px-4 py-3 space-y-2 border-t border-gray-100">
+                      <p className="text-[11px] font-bold text-purple-500 tracking-wider">플짱(제안자)</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                          <span className="text-purple-600 text-xs font-bold">{platform.proposedByName.charAt(0)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{platform.proposedByName}</p>
+                        </div>
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-600 shrink-0">플짱</span>
+                      </div>
+                    </div>
+
+                    {/* 플원(참여자) */}
+                    <div className="px-4 py-3 space-y-2 border-t border-gray-100">
+                      <p className="text-[11px] font-bold text-blue-500 tracking-wider">플원(참여자) {participantUsers.length > 0 && <span className="font-normal text-gray-400">({participantUsers.length}명)</span>}</p>
+                      {participantUsers.length > 0 ? (
+                        participantUsers.map((u) => (
+                          <div key={u.id} className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                              <span className="text-blue-600 text-xs font-bold">{u.name.charAt(0)}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{u.name}</p>
+                            </div>
+                            {u.id !== platform.proposedBy && (
+                              <button
+                                onClick={() => removeParticipant(platform.id, u.id)}
+                                className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center active:bg-red-50 transition group"
+                                title="제외하기"
+                              >
+                                <UserX size={14} className="text-gray-400 group-active:text-red-500" />
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-400 py-2">아직 플원(참여자)가 없습니다</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Admin approve / reject */}
                 {isAdmin() && platform.lifecycle === 'pending' && !rejectMode && (
                   <div className="flex gap-3">
                     <button onClick={() => { approvePlatform(platform.id); navigate(-1); }} className="flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-2xl bg-green-500 text-white font-bold text-sm active:bg-green-600 transition">

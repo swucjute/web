@@ -39,6 +39,19 @@ export const mockUsers: User[] = [
     department: '청년부',
     isActive: true,
   },
+  {
+    id: '4',
+    name: '홍길동',
+    email: 'pending@church.com',
+    password: 'pending123',
+    role: 'member',
+    phone: '010-9999-0000',
+    birthDate: '2000-01-01',
+    joinDate: '2026-07-15',
+    department: '청년부',
+    isActive: false,
+    isPending: true,
+  },
 ]
 
 export const mockEvents: Event[] = [

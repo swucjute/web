@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { FinanceRecord, CommunityPost, Event, Worship, Praise, Survey, Prayer } from '../types';
-import { eventsApi, surveysApi } from '../utils/api';
-import { mockWorships, mockPraises } from '../mocks/data';
+import { eventsApi, surveysApi, worshipsApi, praisesApi } from '../utils/api';
+import { useCrudQuery } from '../hooks/useCrudQuery';
 
 const SEED_POSTS: CommunityPost[] = [
   {
@@ -106,7 +106,7 @@ interface DataContextType {
   addComment: (postId: string, content: string, author: string, authorName: string) => void;
   toggleLike: (postId: string, userId: string) => void;
 
-  // Events (Supabase 연동)
+  // Events (mock API 연동)
   events: Event[];
   eventsLoading: boolean;
   addEvent: (event: Omit<Event, 'id'>) => Promise<void>;
@@ -115,17 +115,19 @@ interface DataContextType {
 
   // Worship
   worships: Worship[];
-  addWorship: (worship: Omit<Worship, 'id'>) => void;
-  updateWorship: (id: string, worship: Partial<Worship>) => void;
-  deleteWorship: (id: string) => void;
+  worshipsLoading: boolean;
+  addWorship: (worship: Omit<Worship, 'id'>) => Promise<void>;
+  updateWorship: (id: string, worship: Partial<Worship>) => Promise<void>;
+  deleteWorship: (id: string) => Promise<void>;
 
   // Praise
   praises: Praise[];
-  addPraise: (praise: Omit<Praise, 'id'>) => void;
-  updatePraise: (id: string, praise: Partial<Praise>) => void;
-  deletePraise: (id: string) => void;
+  praisesLoading: boolean;
+  addPraise: (praise: Omit<Praise, 'id'>) => Promise<void>;
+  updatePraise: (id: string, praise: Partial<Praise>) => Promise<void>;
+  deletePraise: (id: string) => Promise<void>;
 
-  // Survey (Supabase 연동)
+  // Survey (mock API 연동)
   surveys: Survey[];
   surveysLoading: boolean;
   addSurvey: (survey: Omit<Survey, 'id' | 'createdAt' | 'responses'>) => Promise<void>;
@@ -156,57 +158,43 @@ function readLocal<T>(key: string, fallback?: T[]): T[] {
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  // 서버 없는 로컬 전용 데이터 (finances/posts/prayers)
+  // 지연 초기화로 읽어와 localStorage 복구 시 race condition 방지
   const [finances, setFinances] = useState<FinanceRecord[]>(() => readLocal('finances'));
   const [posts, setPosts] = useState<CommunityPost[]>(() => readLocal('posts', SEED_POSTS));
-  const [events, setEvents] = useState<Event[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(true);
-  const [worships, setWorships] = useState<Worship[]>(() => readLocal('worships', mockWorships));
-  const [praises, setPraises] = useState<Praise[]>(() => readLocal('praises', mockPraises));
-  const [surveys, setSurveys] = useState<Survey[]>([]);
-  const [surveysLoading, setSurveysLoading] = useState(true);
   const [prayers, setPrayers] = useState<Prayer[]>(() => readLocal('prayers'));
 
-  // Load events - localStorage 먼저 복구 후 API로 갱신
-  useEffect(() => {
-    const local = localStorage.getItem('events');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (local) setEvents(JSON.parse(local));
-
-    eventsApi.getAll()
-      .then((data) => {
-        const apiEvents = data as Event[];
-        // localStorage에 저장된 이벤트 중 mock에 없는 것(사용자 추가분)을 병합
-        setEvents((prev) => {
-          const apiIds = new Set(apiEvents.map((e) => e.id));
-          const userAdded = prev.filter((e) => !apiIds.has(e.id));
-          return [...apiEvents, ...userAdded];
-        });
-      })
-      .catch((err) => {
-        console.error('[DataContext] Failed to load events:', err);
-      })
-      .finally(() => setEventsLoading(false));
-  }, []);
-
-  // Load surveys from Supabase
-  useEffect(() => {
-    surveysApi.getAll()
-      .then((data) => setSurveys(data as Survey[]))
-      .catch((err) => {
-        console.error('[DataContext] Failed to load surveys:', err);
-        const local = localStorage.getItem('surveys');
-        if (local) setSurveys(JSON.parse(local));
-      })
-      .finally(() => setSurveysLoading(false));
-  }, []);
-
-  // Persist data to localStorage
   useEffect(() => { localStorage.setItem('finances', JSON.stringify(finances)); }, [finances]);
   useEffect(() => { localStorage.setItem('posts', JSON.stringify(posts)); }, [posts]);
-  useEffect(() => { localStorage.setItem('events', JSON.stringify(events)); }, [events]);
-  useEffect(() => { localStorage.setItem('worships', JSON.stringify(worships)); }, [worships]);
-  useEffect(() => { localStorage.setItem('praises', JSON.stringify(praises)); }, [praises]);
   useEffect(() => { localStorage.setItem('prayers', JSON.stringify(prayers)); }, [prayers]);
+
+  // ── Events (mock API) ──────────────────────────────────
+  const {
+    data: events,
+    isLoading: eventsLoading,
+    optimisticMutate: mutateEvents,
+  } = useCrudQuery<Event>('events', async () => (await eventsApi.getAll()) as Event[]);
+
+  // ── Worship (mock API) ─────────────────────────────────
+  const {
+    data: worships,
+    isLoading: worshipsLoading,
+    optimisticMutate: mutateWorships,
+  } = useCrudQuery<Worship>('worships', async () => (await worshipsApi.getAll()) as Worship[]);
+
+  // ── Praise (mock API) ──────────────────────────────────
+  const {
+    data: praises,
+    isLoading: praisesLoading,
+    optimisticMutate: mutatePraises,
+  } = useCrudQuery<Praise>('praises', async () => (await praisesApi.getAll()) as Praise[]);
+
+  // ── Survey (mock API) ──────────────────────────────────
+  const {
+    data: surveys,
+    isLoading: surveysLoading,
+    optimisticMutate: mutateSurveys,
+  } = useCrudQuery<Survey>('surveys', async () => (await surveysApi.getAll()) as Survey[]);
 
   // ── Finance ────────────────────────────────────────────
   const addFinance = (finance: Omit<FinanceRecord, 'id'>) => {
@@ -257,59 +245,70 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  // ── Events (Supabase) ──────────────────────────────────
+  // ── Events ─────────────────────────────────────────────
   const addEvent = async (event: Omit<Event, 'id'>) => {
     const newEvent: Event = { ...event, id: Date.now().toString() };
-    setEvents((prev) => [...prev, newEvent]);
-    try {
-      await eventsApi.add(newEvent);
-    } catch (err) {
-      console.error('[DataContext] addEvent failed:', err);
-      setEvents((prev) => prev.filter((e) => e.id !== newEvent.id));
-    }
+    await mutateEvents(
+      (prev) => [...prev, newEvent],
+      () => eventsApi.add(newEvent),
+    );
   };
   const updateEvent = async (id: string, event: Partial<Event>) => {
-    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...event } : e)));
-    try {
-      await eventsApi.update(id, event);
-    } catch (err) {
-      console.error('[DataContext] updateEvent failed:', err);
-      eventsApi.getAll().then((d) => setEvents(d as Event[])).catch(() => {});
-    }
+    await mutateEvents(
+      (prev) => prev.map((e) => (e.id === id ? { ...e, ...event } : e)),
+      () => eventsApi.update(id, event),
+    );
   };
   const deleteEvent = async (id: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
-    try {
-      await eventsApi.remove(id);
-    } catch (err) {
-      console.error('[DataContext] deleteEvent failed:', err);
-      eventsApi.getAll().then((d) => setEvents(d as Event[])).catch(() => {});
-    }
+    await mutateEvents(
+      (prev) => prev.filter((e) => e.id !== id),
+      () => eventsApi.remove(id),
+    );
   };
 
   // ── Worship ────────────────────────────────────────────
-  const addWorship = (worship: Omit<Worship, 'id'>) => {
-    setWorships((prev) => [...prev, { ...worship, id: Date.now().toString() }]);
+  const addWorship = async (worship: Omit<Worship, 'id'>) => {
+    const newWorship: Worship = { ...worship, id: Date.now().toString() };
+    await mutateWorships(
+      (prev) => [newWorship, ...prev],
+      () => worshipsApi.add(newWorship),
+    );
   };
-  const updateWorship = (id: string, worship: Partial<Worship>) => {
-    setWorships((prev) => prev.map((w) => (w.id === id ? { ...w, ...worship } : w)));
+  const updateWorship = async (id: string, worship: Partial<Worship>) => {
+    await mutateWorships(
+      (prev) => prev.map((w) => (w.id === id ? { ...w, ...worship } : w)),
+      () => worshipsApi.update(id, worship),
+    );
   };
-  const deleteWorship = (id: string) => {
-    setWorships((prev) => prev.filter((w) => w.id !== id));
+  const deleteWorship = async (id: string) => {
+    await mutateWorships(
+      (prev) => prev.filter((w) => w.id !== id),
+      () => worshipsApi.remove(id),
+    );
   };
 
   // ── Praise ─────────────────────────────────────────────
-  const addPraise = (praise: Omit<Praise, 'id'>) => {
-    setPraises((prev) => [...prev, { ...praise, id: Date.now().toString() }]);
+  const addPraise = async (praise: Omit<Praise, 'id'>) => {
+    const newPraise: Praise = { ...praise, id: Date.now().toString() };
+    await mutatePraises(
+      (prev) => [...prev, newPraise],
+      () => praisesApi.add(newPraise),
+    );
   };
-  const updatePraise = (id: string, praise: Partial<Praise>) => {
-    setPraises((prev) => prev.map((p) => (p.id === id ? { ...p, ...praise } : p)));
+  const updatePraise = async (id: string, praise: Partial<Praise>) => {
+    await mutatePraises(
+      (prev) => prev.map((p) => (p.id === id ? { ...p, ...praise } : p)),
+      () => praisesApi.update(id, praise),
+    );
   };
-  const deletePraise = (id: string) => {
-    setPraises((prev) => prev.filter((p) => p.id !== id));
+  const deletePraise = async (id: string) => {
+    await mutatePraises(
+      (prev) => prev.filter((p) => p.id !== id),
+      () => praisesApi.remove(id),
+    );
   };
 
-  // ── Survey (Supabase) ──────────────────────────────────
+  // ── Survey ─────────────────────────────────────────────
   const addSurvey = async (survey: Omit<Survey, 'id' | 'createdAt' | 'responses'>) => {
     const newSurvey: Survey = {
       ...survey,
@@ -317,66 +316,49 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString(),
       responses: [],
     };
-    setSurveys((prev) => [newSurvey, ...prev]);
-    try {
-      await surveysApi.add(newSurvey);
-    } catch (err) {
-      console.error('[DataContext] addSurvey failed:', err);
-      setSurveys((prev) => prev.filter((s) => s.id !== newSurvey.id));
-    }
+    await mutateSurveys(
+      (prev) => [newSurvey, ...prev],
+      () => surveysApi.add(newSurvey),
+    );
   };
 
   const updateSurvey = async (
     id: string,
     data: { title?: string; description?: string; deadline?: string; isActive?: boolean },
   ) => {
-    setSurveys((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
-    try {
-      await surveysApi.update(id, data);
-    } catch (err) {
-      console.error('[DataContext] updateSurvey failed:', err);
-      surveysApi.getAll().then((d) => setSurveys(d as Survey[])).catch(() => {});
-    }
+    await mutateSurveys(
+      (prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)),
+      () => surveysApi.update(id, data),
+    );
   };
 
   const deleteSurvey = async (id: string) => {
-    setSurveys((prev) => prev.filter((s) => s.id !== id));
-    try {
-      await surveysApi.remove(id);
-    } catch (err) {
-      console.error('[DataContext] deleteSurvey failed:', err);
-      surveysApi.getAll().then((d) => setSurveys(d as Survey[])).catch(() => {});
-    }
+    await mutateSurveys(
+      (prev) => prev.filter((s) => s.id !== id),
+      () => surveysApi.remove(id),
+    );
   };
 
   const submitSurveyResponse = async (surveyId: string, userId: string, userName: string, answers: Record<string, string | string[]>) => {
-    // Optimistic local update
-    setSurveys((prev) =>
-      prev.map((survey) => {
-        if (survey.id !== surveyId) return survey;
-        const newResponse = {
-          id: Date.now().toString(),
-          userId,
-          userName,
-          answers,
-          submittedAt: new Date().toISOString(),
-        };
-        const responses = [...survey.responses];
-        const existingIdx = responses.findIndex((r) => r.userId === userId);
-        if (existingIdx >= 0) responses[existingIdx] = newResponse;
-        else responses.push(newResponse);
-        return { ...survey, responses };
-      }),
+    const newResponse = {
+      id: Date.now().toString(),
+      userId,
+      userName,
+      answers,
+      submittedAt: new Date().toISOString(),
+    };
+    await mutateSurveys(
+      (prev) =>
+        prev.map((survey) => {
+          if (survey.id !== surveyId) return survey;
+          const responses = [...survey.responses];
+          const existingIdx = responses.findIndex((r) => r.userId === userId);
+          if (existingIdx >= 0) responses[existingIdx] = newResponse;
+          else responses.push(newResponse);
+          return { ...survey, responses };
+        }),
+      () => surveysApi.respond(surveyId, { userId, userName, answers }),
     );
-    try {
-      // Server responds with the updated survey including new response
-      const updated = await surveysApi.respond(surveyId, { userId, userName, answers });
-      // Sync with server truth
-      setSurveys((prev) => prev.map((s) => (s.id === surveyId ? (updated as Survey) : s)));
-    } catch (err) {
-      console.error('[DataContext] submitSurveyResponse failed:', err);
-      surveysApi.getAll().then((d) => setSurveys(d as Survey[])).catch(() => {});
-    }
   };
 
   // ── Prayer ─────────────────────────────────────────────
@@ -410,8 +392,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         finances, addFinance, updateFinance, deleteFinance,
         posts, addPost, addComment, toggleLike,
         events, eventsLoading, addEvent, updateEvent, deleteEvent,
-        worships, addWorship, updateWorship, deleteWorship,
-        praises, addPraise, updatePraise, deletePraise,
+        worships, worshipsLoading, addWorship, updateWorship, deleteWorship,
+        praises, praisesLoading, addPraise, updatePraise, deletePraise,
         surveys, surveysLoading, addSurvey, updateSurvey, deleteSurvey, submitSurveyResponse,
         prayers, addPrayer, updatePrayer, deletePrayer, togglePrayerReaction,
       }}

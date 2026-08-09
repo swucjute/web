@@ -1,12 +1,41 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { User } from '../types';
+import type { User, UserRole } from '../types';
 import { membersApi } from '../utils/api';
+import { useCrudQuery } from '../hooks/useCrudQuery';
+import { clearTokens, logoutRequest, type MemberMeResponse, type MemberRole } from '../utils/authClient';
+
+const MEMBER_ROLE_MAP: Record<MemberRole, UserRole> = {
+  ADMIN: 'admin',
+  MANAGER: 'admin',
+  LEADER: 'leader',
+  USER: 'member',
+};
+
+function memberToUser(member: MemberMeResponse): User {
+  return {
+    id: String(member.memberId),
+    name: member.profile?.name ?? '',
+    email: member.email ?? '',
+    password: '',
+    role: MEMBER_ROLE_MAP[member.role],
+    phone: member.profile?.phoneNumber ?? '',
+    birthDate: member.profile?.birthDate ?? '',
+    joinDate: '',
+    department: member.profile?.department ?? '',
+    position: member.profile?.position ?? undefined,
+    bank: member.profile?.bankName ?? undefined,
+    accountNumber: member.profile?.accountNumber ?? undefined,
+    isActive: member.status === 'ACTIVE',
+    isPending: member.status !== 'ACTIVE',
+  };
+}
 
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
   loading: boolean;
   login: (email: string, password: string) => boolean;
+  loginWithMember: (member: MemberMeResponse) => void;
   logout: () => void;
   isAdmin: () => boolean;
   isLeader: () => boolean;
@@ -57,6 +86,19 @@ const defaultUsers: User[] = [
     department: '청년부',
     isActive: true,
   },
+  {
+    id: '4',
+    name: '홍길동',
+    email: 'pending@church.com',
+    password: 'pending123',
+    role: 'member',
+    phone: '010-9999-0000',
+    birthDate: '2000-01-01',
+    joinDate: '2026-07-15',
+    department: '청년부',
+    isActive: false,
+    isPending: true,
+  },
 ];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -64,21 +106,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem('currentUser');
     return saved ? (JSON.parse(saved) as User) : null;
   });
-  const [users, setUsers] = useState<User[]>(defaultUsers); // start with defaults so login works immediately
-  const [loading, setLoading] = useState(true);
 
-  // Load users from Supabase on mount
-  useEffect(() => {
-    membersApi.getAll()
-      .then((data) => {
-        setUsers(data as User[]);
-      })
-      .catch((err) => {
-        console.error('[AuthContext] Failed to load members from Supabase, using defaults:', err);
-        setUsers(defaultUsers);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const {
+    data: users,
+    isLoading: loading,
+    optimisticMutate,
+  } = useCrudQuery<User>('members', async () => {
+    try {
+      return (await membersApi.getAll()) as User[];
+    } catch (err) {
+      console.error('[AuthContext] Failed to load members from Supabase, using defaults:', err);
+      return defaultUsers;
+    }
+  });
 
   // Refresh currentUser from latest users data (keeps profile in sync)
   useEffect(() => {
@@ -93,7 +133,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [users]);
 
   const login = (email: string, password: string): boolean => {
-    const user = users.find((u) => u.email === email && u.password === password && u.isActive);
+    const user = users.find(
+      (u) => u.email === email && u.password === password && (u.isActive || u.isPending)
+    );
     if (user) {
       setCurrentUser(user);
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -103,10 +145,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  const loginWithMember = (member: MemberMeResponse) => {
+    const user = memberToUser(member);
+    setCurrentUser(user);
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  };
+
   const logout = () => {
+    const token = localStorage.getItem('accessToken');
+    const isRealSession = !!token && !token.startsWith('mock-token-');
+
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
-    localStorage.removeItem('accessToken');
+
+    // logoutRequest() reads the refreshToken before clearing it, so only
+    // call clearTokens() directly for the mock session (no server call needed).
+    if (isRealSession) {
+      logoutRequest().catch((err) => console.error('[AuthContext] Failed to log out:', err));
+    } else {
+      clearTokens();
+    }
   };
 
   const isAdmin = () => currentUser?.role === 'admin';
@@ -114,43 +172,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const addUser = async (userData: Omit<User, 'id'>) => {
     const newUser: User = { ...userData, id: Date.now().toString() };
-    // Optimistic update
-    setUsers((prev) => [...prev, newUser]);
-    try {
-      await membersApi.add(newUser);
-    } catch (err) {
-      console.error('[AuthContext] addUser failed:', err);
-      // Rollback
-      setUsers((prev) => prev.filter((u) => u.id !== newUser.id));
-    }
+    await optimisticMutate(
+      (prev) => [...prev, newUser],
+      () => membersApi.add(newUser),
+    );
   };
 
   const updateUser = async (id: string, userData: Partial<User>) => {
-    // Optimistic update
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...userData } : u)));
     if (currentUser?.id === id) {
       const updated = { ...currentUser, ...userData };
       setCurrentUser(updated);
       localStorage.setItem('currentUser', JSON.stringify(updated));
     }
-    try {
-      await membersApi.update(id, userData);
-    } catch (err) {
-      console.error('[AuthContext] updateUser failed:', err);
-      // Reload from server on error
-      membersApi.getAll().then((data) => setUsers(data as User[])).catch(() => {});
-    }
+    await optimisticMutate(
+      (prev) => prev.map((u) => (u.id === id ? { ...u, ...userData } : u)),
+      () => membersApi.update(id, userData),
+    );
   };
 
   const deleteUser = async (id: string) => {
-    // Optimistic update (soft-delete)
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isActive: false } : u)));
-    try {
-      await membersApi.remove(id);
-    } catch (err) {
-      console.error('[AuthContext] deleteUser failed:', err);
-      membersApi.getAll().then((data) => setUsers(data as User[])).catch(() => {});
-    }
+    await optimisticMutate(
+      (prev) => prev.map((u) => (u.id === id ? { ...u, isActive: false } : u)),
+      () => membersApi.remove(id),
+    );
   };
 
   return (
@@ -160,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         users,
         loading,
         login,
+        loginWithMember,
         logout,
         isAdmin,
         isLeader,

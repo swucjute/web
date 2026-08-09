@@ -57,6 +57,19 @@ const defaultUsers: User[] = [
     department: '청년부',
     isActive: true,
   },
+  {
+    id: '4',
+    name: '홍길동',
+    email: 'pending@church.com',
+    password: 'pending123',
+    role: 'member',
+    phone: '010-9999-0000',
+    birthDate: '2000-01-01',
+    joinDate: '2026-07-15',
+    department: '청년부',
+    isActive: false,
+    isPending: true,
+  },
 ];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -94,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [users]);
 
   const login = (email: string, password: string): boolean => {
-    const user = users.find((u) => u.email === email && u.password === password && u.isActive);
+    const user = users.find((u) => u.email === email && u.password === password && (u.isActive || u.isPending));
     if (user) {
       setCurrentUser(user);
       localStorage.setItem('currentUser', JSON.stringify(user));

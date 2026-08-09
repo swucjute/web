@@ -28,18 +28,18 @@ interface MenuItem {
 
 const activityItems: MenuItem[] = [
   { label: '내 기도제목 모아보기', icon: BookHeart, path: '/prayer', color: 'text-rose-500', bg: 'bg-rose-50' },
-  { label: '참여한 설문보기', icon: ClipboardCheck, path: '/survey', color: 'text-violet-500', bg: 'bg-violet-50' },
-  { label: '작성한 글보기', icon: FileText, path: '/community', color: 'text-sky-500', bg: 'bg-sky-50' },
-  { label: '참여한 플랫폼보기', icon: LayoutGrid, color: 'text-teal-500', bg: 'bg-teal-50', soon: true },
+  { label: '참여한 설문 보기', icon: ClipboardCheck, path: '/survey', color: 'text-violet-500', bg: 'bg-violet-50' },
+  { label: '작성한 글 보기', icon: FileText, path: '/community', color: 'text-sky-500', bg: 'bg-sky-50' },
+  { label: '참여한 플랫폼 보기', icon: LayoutGrid, path: '/more/my-platforms', color: 'text-teal-500', bg: 'bg-teal-50' },
   { label: '재정 청구', icon: CreditCard, color: 'text-orange-500', bg: 'bg-orange-50', soon: true },
 ];
 
 const manageItems: MenuItem[] = [
-  { label: '교적 관리', icon: Users, path: '/members', color: 'text-blue-500', bg: 'bg-blue-50' },
+  { label: '교적 및 회원 관리', icon: Users, path: '/members', color: 'text-blue-500', bg: 'bg-blue-50' },
   { label: '재정 관리', icon: DollarSign, path: '/finance', color: 'text-green-500', bg: 'bg-green-50' },
-  { label: '플랫폼 관리', icon: LayoutGrid, color: 'text-teal-500', bg: 'bg-teal-50', soon: true },
+  { label: '플랫폼 관리', icon: LayoutGrid, path: '/more/platform-manage', color: 'text-teal-500', bg: 'bg-teal-50' },
   { label: '일정 관리', icon: Calendar, path: '/calendar', color: 'text-indigo-500', bg: 'bg-indigo-50' },
-  { label: '예배 관리', icon: Church, path: '/worship', color: 'text-amber-500', bg: 'bg-amber-50' },
+  { label: '예배 관리', icon: Church, path: '/worship/manage', color: 'text-amber-500', bg: 'bg-amber-50' },
   { label: '찬양 관리', icon: Music, path: '/praise', color: 'text-pink-500', bg: 'bg-pink-50' },
   { label: '설문 관리', icon: ClipboardList, path: '/survey', color: 'text-purple-500', bg: 'bg-purple-50' },
 ];

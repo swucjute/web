@@ -14,6 +14,7 @@ export interface User {
   bank?: string;
   accountNumber?: string;
   isActive: boolean;
+  isPending?: boolean;
 }
 
 export interface FinanceRecord {
@@ -35,6 +36,12 @@ export interface CommunityPost {
   createdAt: string;
   comments: Comment[];
   likes: string[];
+  type?: 'notice' | 'recruit';
+  category?: '예배' | '공지' | '전도' | '행사';
+  date?: string;
+  location?: string;
+  chatLink?: string;
+  maxParticipants?: string;
 }
 
 export interface Comment {
@@ -62,12 +69,25 @@ export interface Worship {
   title: string;
   preacher: string;
   scripture: string;
+  scriptureText?: string;
   sermonTitle: string;
   attendance: number;
   worshipLeader: string;
   praiseList: string[];
   offerings: number;
   notes: string;
+  youtubeUrl?: string;
+  committee?: {
+    repPrayer?: string;   // 대표기도
+    bibleReading?: string; // 말씀봉독
+    offering?: string;    // 봉헌위원
+  };
+  announcements?: {
+    id: string;
+    title: string;
+    description: string;
+    surveyId?: string;
+  }[];
 }
 
 export interface Praise {
@@ -79,6 +99,7 @@ export interface Praise {
   lyrics?: string;
   youtubeUrl?: string;
   category: string;
+  worshipId?: string;
 }
 
 export interface Survey {
@@ -108,7 +129,8 @@ export interface SurveyResponse {
   submittedAt: string;
 }
 
-export type PlatformStatus = 'pending' | 'recruiting' | 'operating' | 'ended';
+export type PlatformLifecycle = 'pending' | 'active';
+export type PlatformActiveState = 'recruiting' | 'operating' | 'ended';
 
 export interface Prayer {
   id: string;
@@ -125,14 +147,17 @@ export interface Platform {
   id: string;
   title: string;
   scheduledDate: string;   // 일시
+  location: string;        // 장소
   content: string;         // 내용
   purpose: string;         // 목적
   other: string;           // 기타
   posterUrl?: string;      // base64 or URL
-  status: PlatformStatus;
+  lifecycle: PlatformLifecycle;  // pending(승인대기), active(활성), ended(종료)
+  activeStates: PlatformActiveState[];  // recruiting(모집중), operating(운영중) - 동시 가능
   proposedBy: string;      // userId
   proposedByName: string;
-  participants: string[];  // userIds
+  participants: string[];        // userIds (승인된 참여자)
+  pendingParticipants?: string[]; // userIds (참여 신청 대기중)
   createdAt: string;
   approvedAt?: string;
   rejectedReason?: string;

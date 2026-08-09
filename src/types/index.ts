@@ -14,6 +14,7 @@ export interface User {
   bank?: string;
   accountNumber?: string;
   isActive: boolean;
+  isPending?: boolean;
 }
 
 export interface FinanceRecord {
@@ -164,7 +165,8 @@ export interface Platform {
   activeStates: PlatformActiveState[]; // recruiting, operating, ended — 동시 가능
   proposedBy: string;             // userId
   proposedByName: string;
-  participants: string[];         // userIds
+  participants: string[];         // userIds (승인된 참여자)
+  pendingParticipants?: string[]; // userIds (참여 신청 대기중)
   createdAt: string;
   approvedAt?: string;
   rejectedReason?: string;
