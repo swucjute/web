@@ -100,7 +100,9 @@ export function PlatformPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('recruiting');
   const [activityView, setActivityView] = useState<'grid' | 'detail'>('grid');
 
-  const isYouthMember = currentUser?.department === '청년부';
+  // 실제 카카오 로그인 사용자는 백엔드에 소속 제한이 없으므로 무조건 허용, 목업 로그인만 소속으로 체크
+  const isYouthMember =
+    currentUser?.authSource === 'kakao' || currentUser?.department === '청년부';
 
   const recruiting = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('recruiting'));
   const operating  = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('operating'));

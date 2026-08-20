@@ -4,7 +4,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: UserRole;
   phone: string;
   birthDate: string;
@@ -15,6 +15,8 @@ export interface User {
   accountNumber?: string;
   isActive: boolean;
   isPending?: boolean;
+  /** 'kakao'면 실제 백엔드 로그인 사용자 (department 값이 백엔드 enum이라 '청년부' 문자열과 다름 — 소속 체크 시 참고) */
+  authSource?: 'mock' | 'kakao';
 }
 
 export interface FinanceRecord {
