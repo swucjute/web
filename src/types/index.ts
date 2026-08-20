@@ -140,9 +140,6 @@ export interface SurveyResponse {
   submittedAt: string;
 }
 
-export type PlatformLifecycle = 'pending' | 'active';
-export type PlatformActiveState = 'recruiting' | 'operating' | 'ended';
-
 export interface Prayer {
   id: string;
   content: string;
@@ -154,22 +151,68 @@ export interface Prayer {
   createdAt: string;
 }
 
+// --- Platform (백엔드 도메인 모양 그대로) ---
+// 백엔드는 approvalStatus(승인여부)와 operatingStatus(운영상태)를 각각 하나의 값만 가진다.
+// (예전 프론트는 여러 상태를 배열로 동시에 가질 수 있게 설계됐었는데, 실제 백엔드 기준으로 단순화했다.)
+export type PlatformApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type PlatformOperatingStatus = 'RECRUITING' | 'ACTIVE' | 'CLOSED' | 'FINISHED' | 'CANCELLED';
+export type PlatformMemberRole = 'OWNER' | 'MANAGER' | 'MEMBER';
+export type PlatformMemberStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+
+// 백엔드 목록/페이지 API 공통 응답 모양
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
 export interface Platform {
-  id: string;
+  id: string;                     // String(platformId) — 프론트 공용 훅이 문자열 id를 요구해서 추가한 필드
+  platformId: number;
   title: string;
-  scheduledDate: string;          // 일시
-  location: string;               // 장소
-  content: string;                // 내용
-  purpose: string;                // 목적
-  other: string;                  // 기타
-  posterUrl?: string;             // base64 or URL
-  lifecycle: PlatformLifecycle;   // pending(승인대기), active(활성)
-  activeStates: PlatformActiveState[]; // recruiting, operating, ended — 동시 가능
-  proposedBy: string;             // userId
-  proposedByName: string;
-  participants: string[];         // userIds (승인된 참여자)
-  pendingParticipants?: string[]; // userIds (참여 신청 대기중)
+  scheduleText: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  location: string | null;
+  posterUrl: string | null;
+  approvalStatus: PlatformApprovalStatus;
+  operatingStatus: PlatformOperatingStatus;
+  approvedMemberCount: number;
+  ownerMemberId: number;
+  ownerName: string | null;
   createdAt: string;
-  approvedAt?: string;
-  rejectedReason?: string;
+  content?: string | null;        // 목록 응답엔 없고 상세 응답에만 있음
+  purpose?: string | null;
+  etc?: string | null;
+  updatedAt?: string;
+}
+
+// 플랫폼 생성/수정 요청 바디 (백엔드 PlatformSaveRequest와 동일)
+export interface PlatformSaveRequest {
+  title: string;
+  scheduleText?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  location?: string | null;
+  content?: string | null;
+  purpose?: string | null;
+  etc?: string | null;
+  posterUrl?: string | null;
+  operatingStatus?: PlatformOperatingStatus;
+}
+
+export interface PlatformMember {
+  platformMemberId: number;
+  platformId: number;
+  memberId: number;
+  memberName: string | null;
+  role: PlatformMemberRole;
+  status: PlatformMemberStatus;
+  requestedAt: string;
+  approvedAt: string | null;
+  rejectedReason: string | null;
 }

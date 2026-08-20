@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { http, HttpResponse } from 'msw'
-import { mockUsers, mockEvents, mockPlatforms, mockSurveys, mockWorships, mockPraises } from './data'
-import type { User, Event, Platform, Survey, Worship, Praise } from '../types'
+import { mockUsers, mockEvents, mockSurveys, mockWorships, mockPraises } from './data'
+import type { User, Event, Survey, Worship, Praise } from '../types'
 
 // 메모리에 데이터 유지 (메모리에만 저장되고 새로고침하면 초기화)
+// platforms는 이제 실제 백엔드(/api/v1/platforms)로만 통신하므로 여기서 모킹하지 않는다.
 const users: User[] = [...mockUsers]
 const events: Event[] = [...mockEvents]
-const platforms: Platform[] = [...mockPlatforms]
 const surveys: Survey[] = [...mockSurveys]
 const worships: Worship[] = [...mockWorships]
 const praises: Praise[] = [...mockPraises]
@@ -88,46 +88,6 @@ export const handlers = [
       return HttpResponse.json(null, { status: 404 })
     }
     events.splice(index, 1)
-    return HttpResponse.json(null, { status: 204 })
-  }),
-
-  // ============ Platforms API ============
-  http.get('/api/platforms', () => {
-    return HttpResponse.json(platforms)
-  }),
-
-  http.get('/api/platforms/:id', ({ params }) => {
-    const platform = platforms.find((p) => p.id === params.id)
-    return platform ? HttpResponse.json(platform) : HttpResponse.json(null, { status: 404 })
-  }),
-
-  http.post('/api/platforms', async ({ request }) => {
-    const body = (await request.json()) as any
-    const newPlatform: Platform = {
-      ...body,
-      id: String(platforms.length + 1),
-      createdAt: new Date().toISOString(),
-    }
-    platforms.push(newPlatform)
-    return HttpResponse.json(newPlatform, { status: 201 })
-  }),
-
-  http.put('/api/platforms/:id', async ({ params, request }) => {
-    const body = (await request.json()) as any
-    const index = platforms.findIndex((p) => p.id === params.id)
-    if (index === -1) {
-      return HttpResponse.json(null, { status: 404 })
-    }
-    platforms[index] = { ...platforms[index], ...body }
-    return HttpResponse.json(platforms[index])
-  }),
-
-  http.delete('/api/platforms/:id', ({ params }) => {
-    const index = platforms.findIndex((p) => p.id === params.id)
-    if (index === -1) {
-      return HttpResponse.json(null, { status: 404 })
-    }
-    platforms.splice(index, 1)
     return HttpResponse.json(null, { status: 204 })
   }),
 
