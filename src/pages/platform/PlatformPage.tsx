@@ -2,32 +2,32 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
-import type { Platform } from '../../types';
+import type { Platform, PlatformOperatingStatus } from '../../types';
 import {
   Plus, Users, LayoutGrid, ChevronRight,
   Image as ImageIcon, FileText, Heart, MessageCircle, Grid3x3, MapPin,
 } from 'lucide-react';
 
-function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () => void }) {
-  const getStatusDisplay = () => {
-    if (platform.lifecycle === 'pending') {
-      return { label: '승인 대기', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' };
-    }
-    const activeStates = platform.activeStates || [];
-    if (activeStates.length === 0) {
-      return { label: '활성', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' };
-    }
-    const meta: Record<string, { label: string; color: string; dot: string }> = {
-      recruiting: { label: '모집중',   color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-      operating:  { label: '운영중',   color: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'  },
-      ended:      { label: '운영종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-    };
-    if (activeStates.length === 1) return meta[activeStates[0]];
-    const labels = activeStates.map((s) => meta[s].label).join('·');
-    return { label: labels, color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' };
-  };
+const operatingStatusMeta: Record<PlatformOperatingStatus, { label: string; color: string; dot: string }> = {
+  RECRUITING: { label: '모집중',   color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
+  ACTIVE:     { label: '운영중',   color: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'  },
+  CLOSED:     { label: '모집종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
+  FINISHED:   { label: '운영종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
+  CANCELLED:  { label: '취소됨',   color: 'bg-gray-100 text-gray-400',   dot: 'bg-gray-300'  },
+};
 
-  const statusMeta = getStatusDisplay();
+function getStatusDisplay(platform: Platform) {
+  if (platform.approvalStatus === 'PENDING') {
+    return { label: '승인 대기', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' };
+  }
+  if (platform.approvalStatus === 'REJECTED') {
+    return { label: '반려됨', color: 'bg-red-100 text-red-700', dot: 'bg-red-400' };
+  }
+  return operatingStatusMeta[platform.operatingStatus];
+}
+
+function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () => void }) {
+  const statusMeta = getStatusDisplay(platform);
 
   return (
     <button
@@ -54,7 +54,7 @@ function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () =
       <div className="px-4 py-3">
         <p className="font-bold text-gray-900 text-sm mb-1 line-clamp-1">{platform.title}</p>
         <div className="space-y-0.5 mb-2">
-          <p className="text-xs text-gray-500 line-clamp-1">{platform.scheduledDate}</p>
+          <p className="text-xs text-gray-500 line-clamp-1">{platform.scheduleText}</p>
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <MapPin size={11} />
             <span className="line-clamp-1">{platform.location}</span>
@@ -63,7 +63,7 @@ function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () =
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <Users size={12} />
-            <span>{(platform.participants || []).length + 1}명 참여</span>
+            <span>{platform.approvedMemberCount}명 참여</span>
           </div>
           <div className="flex items-center gap-0.5 text-xs text-blue-500 font-medium">
             <span>자세히</span>
@@ -104,9 +104,10 @@ export function PlatformPage() {
   const isYouthMember =
     currentUser?.authSource === 'kakao' || currentUser?.department === '청년부';
 
-  const recruiting = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('recruiting'));
-  const operating  = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('operating'));
-  const ended      = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('ended'));
+  const approved = platforms.filter((p) => p.approvalStatus === 'APPROVED');
+  const recruiting = approved.filter((p) => p.operatingStatus === 'RECRUITING');
+  const operating  = approved.filter((p) => p.operatingStatus === 'ACTIVE');
+  const ended      = approved.filter((p) => p.operatingStatus === 'CLOSED' || p.operatingStatus === 'FINISHED' || p.operatingStatus === 'CANCELLED');
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'recruiting', label: '모집중',  count: recruiting.length },

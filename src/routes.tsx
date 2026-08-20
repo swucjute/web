@@ -38,6 +38,7 @@ import { Survey } from './pages/survey/Survey'
 import { PlatformPage } from './pages/platform/PlatformPage'
 import { PlatformProposePage } from './pages/platform/PlatformProposePage'
 import { PlatformDetailPage } from './pages/platform/PlatformDetailPage'
+import { PlatformEditPage } from './pages/platform/PlatformEditPage'
 
 // more
 import { MorePage } from './pages/more/MorePage'
@@ -118,6 +119,7 @@ export const router = createBrowserRouter([
       { path: 'prayer',               element: <PrayerPage /> },
       { path: 'platform',             element: <PlatformPage /> },
       { path: 'platform/propose',     element: <PlatformProposePage /> },
+      { path: 'platform/edit/:id',    element: <PlatformEditPage /> },
       { path: 'platform/:id',         element: <PlatformDetailPage /> },
     ],
   },
