@@ -1,21 +1,11 @@
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
+import { platformStatusBadges } from '../../utils/platformStatus';
 import {
   ArrowLeft, Users, ChevronRight,
   CheckCircle2, XCircle, MapPin, Clock,
 } from 'lucide-react';
-import type { PlatformOperatingStatus } from '../../types';
-
-const operatingStatusMeta: Record<PlatformOperatingStatus, { label: string; color: string; dot: string }> = {
-  RECRUITING: { label: '모집중',   color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-  ACTIVE:     { label: '운영중',   color: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'  },
-  CLOSED:     { label: '모집종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-  FINISHED:   { label: '운영종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-  CANCELLED:  { label: '취소됨',   color: 'bg-gray-100 text-gray-400',   dot: 'bg-gray-300'  },
-};
-
-const operatingStatusChoices: PlatformOperatingStatus[] = ['RECRUITING', 'ACTIVE', 'FINISHED'];
 
 export function PlatformManagePage() {
   const navigate = useNavigate();
@@ -93,10 +83,12 @@ export function PlatformManagePage() {
                   <div className="flex-1">
                     <p className="font-bold text-gray-800 text-sm">{p.title}</p>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${operatingStatusMeta[p.operatingStatus].color}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${operatingStatusMeta[p.operatingStatus].dot}`} />
-                        {operatingStatusMeta[p.operatingStatus].label}
-                      </span>
+                      {platformStatusBadges(p).map((badge) => (
+                        <span key={badge.label} className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${badge.color}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                          {badge.label}
+                        </span>
+                      ))}
                     </div>
                     <div className="flex flex-col gap-0.5 mt-2 text-xs text-gray-500">
                       <div className="flex items-center gap-1">
@@ -118,21 +110,32 @@ export function PlatformManagePage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
-                  {operatingStatusChoices.map((s) => (
+                {p.closedStatus === null && (
+                  <div className="flex gap-1.5 flex-wrap">
                     <button
-                      key={s}
-                      onClick={() => changeOperatingStatus(p.id, s)}
+                      onClick={() => changeOperatingStatus(p.id, p.recruiting ? 'STOP_RECRUITING' : 'START_RECRUITING')}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-                        p.operatingStatus === s
-                          ? `${operatingStatusMeta[s].color} ring-1 ring-inset ring-current`
-                          : 'bg-gray-100 text-gray-500'
+                        p.recruiting ? 'bg-green-100 text-green-700 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {operatingStatusMeta[s].label}
+                      모집중
                     </button>
-                  ))}
-                </div>
+                    <button
+                      onClick={() => changeOperatingStatus(p.id, p.operating ? 'STOP_OPERATING' : 'START_OPERATING')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                        p.operating ? 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      운영중
+                    </button>
+                    <button
+                      onClick={() => changeOperatingStatus(p.id, 'FINISH')}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-500 transition"
+                    >
+                      종료
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

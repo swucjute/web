@@ -1,26 +1,11 @@
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
+import { platformStatusBadges } from '../../utils/platformStatus';
 import {
   Users, ChevronRight, LayoutGrid, MapPin, ArrowLeft,
 } from 'lucide-react';
-import type { Platform, PlatformOperatingStatus } from '../../types';
-
-const approvalStatusMeta = {
-  PENDING:  { label: '승인 대기', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' },
-  REJECTED: { label: '반려됨',   color: 'bg-red-100 text-red-700',      dot: 'bg-red-400'    },
-};
-
-const operatingStatusMeta: Record<PlatformOperatingStatus, { label: string; color: string; dot: string }> = {
-  RECRUITING: { label: '모집중',   color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-  ACTIVE:     { label: '운영중',   color: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'  },
-  CLOSED:     { label: '모집종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-  FINISHED:   { label: '운영종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-  CANCELLED:  { label: '취소됨',   color: 'bg-gray-100 text-gray-400',   dot: 'bg-gray-300'  },
-};
-
-// 운영상태 변경 버튼 3개에 매핑할 값 (백엔드는 5개 값을 갖지만, 이 화면은 자주 쓰는 3개만 노출)
-const operatingStatusChoices: PlatformOperatingStatus[] = ['RECRUITING', 'ACTIVE', 'FINISHED'];
+import type { Platform } from '../../types';
 
 export function MyPlatformsPage() {
   const navigate = useNavigate();
@@ -57,17 +42,12 @@ export function MyPlatformsPage() {
 
           {/* 상태 배지 */}
           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-            {p.approvalStatus === 'PENDING' || p.approvalStatus === 'REJECTED' ? (
-              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${approvalStatusMeta[p.approvalStatus].color}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${approvalStatusMeta[p.approvalStatus].dot}`} />
-                {approvalStatusMeta[p.approvalStatus].label}
+            {platformStatusBadges(p).map((badge) => (
+              <span key={badge.label} className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${badge.color}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                {badge.label}
               </span>
-            ) : (
-              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${operatingStatusMeta[p.operatingStatus].color}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${operatingStatusMeta[p.operatingStatus].dot}`} />
-                {operatingStatusMeta[p.operatingStatus].label}
-              </span>
-            )}
+            ))}
           </div>
 
           {/* 정보 */}
@@ -85,22 +65,31 @@ export function MyPlatformsPage() {
             </div>
           </div>
 
-          {/* 상태 변경 — 내가 제안한 플랫폼 중 승인된 경우 */}
-          {isOwner && p.approvalStatus === 'APPROVED' && (
+          {/* 상태 변경 — 내가 제안한 플랫폼 중 승인되고 아직 종료되지 않은 경우 */}
+          {isOwner && p.approvalStatus === 'APPROVED' && p.closedStatus === null && (
             <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
-              {operatingStatusChoices.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => changeOperatingStatus(p.id, s)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-                    p.operatingStatus === s
-                      ? `${operatingStatusMeta[s].color} ring-1 ring-inset ring-current`
-                      : 'bg-gray-100 text-gray-500'
-                  }`}
-                >
-                  {operatingStatusMeta[s].label}
-                </button>
-              ))}
+              <button
+                onClick={() => changeOperatingStatus(p.id, p.recruiting ? 'STOP_RECRUITING' : 'START_RECRUITING')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                  p.recruiting ? 'bg-green-100 text-green-700 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                모집중
+              </button>
+              <button
+                onClick={() => changeOperatingStatus(p.id, p.operating ? 'STOP_OPERATING' : 'START_OPERATING')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                  p.operating ? 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                운영중
+              </button>
+              <button
+                onClick={() => changeOperatingStatus(p.id, 'FINISH')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-500 transition"
+              >
+                종료
+              </button>
             </div>
           )}
         </div>
