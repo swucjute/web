@@ -114,32 +114,38 @@ interface PlatformListParams {
   keyword?: string
 }
 
+// 백엔드 응답(PlatformListItemResponse/PlatformDetailResponse)엔 platformId만 있고 id가 없어서,
+// 목록의 문자열 id를 기대하는 기존 화면 코드가 그대로 쓸 수 있게 여기서 채워 넣는다.
+type PlatformDto = Omit<Platform, 'id'>
+const withId = (dto: PlatformDto): Platform => ({ ...dto, id: String(dto.platformId) })
+
 export const platformsApi = {
-  getAll: (params: PlatformListParams = {}) => {
+  getAll: async (params: PlatformListParams = {}) => {
     const qs = new URLSearchParams({ page: '0', size: '100' })
     if (params.approvalStatus) qs.set('approvalStatus', params.approvalStatus)
     if (params.recruiting !== undefined) qs.set('recruiting', String(params.recruiting))
     if (params.operating !== undefined) qs.set('operating', String(params.operating))
     if (params.closedStatus) qs.set('closedStatus', params.closedStatus)
     if (params.keyword) qs.set('keyword', params.keyword)
-    return apiRequest<PageResponse<Platform>>(`/api/v1/platforms?${qs.toString()}`)
+    const page = await apiRequest<PageResponse<PlatformDto>>(`/api/v1/platforms?${qs.toString()}`)
+    return { ...page, content: page.content.map(withId) }
   },
-  getById: (id: string) => apiRequest<Platform>(`/api/v1/platforms/${id}`),
-  add: (data: PlatformSaveRequest) =>
-    apiRequest<Platform>('/api/v1/platforms', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: PlatformSaveRequest) =>
-    apiRequest<Platform>(`/api/v1/platforms/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  getById: async (id: string) => withId(await apiRequest<PlatformDto>(`/api/v1/platforms/${id}`)),
+  add: async (data: PlatformSaveRequest) =>
+    withId(await apiRequest<PlatformDto>('/api/v1/platforms', { method: 'POST', body: JSON.stringify(data) })),
+  update: async (id: string, data: PlatformSaveRequest) =>
+    withId(await apiRequest<PlatformDto>(`/api/v1/platforms/${id}`, { method: 'PUT', body: JSON.stringify(data) })),
   remove: (id: string) => apiRequest<null>(`/api/v1/platforms/${id}`, { method: 'DELETE' }),
-  changeApprovalStatus: (id: string, approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED') =>
-    apiRequest<Platform>(`/api/v1/platforms/${id}/approval-status`, {
+  changeApprovalStatus: async (id: string, approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED') =>
+    withId(await apiRequest<PlatformDto>(`/api/v1/platforms/${id}/approval-status`, {
       method: 'PATCH',
       body: JSON.stringify({ approvalStatus }),
-    }),
-  changeOperatingStatus: (id: string, action: PlatformOperatingStatusAction) =>
-    apiRequest<Platform>(`/api/v1/platforms/${id}/operating-status`, {
+    })),
+  changeOperatingStatus: async (id: string, action: PlatformOperatingStatusAction) =>
+    withId(await apiRequest<PlatformDto>(`/api/v1/platforms/${id}/operating-status`, {
       method: 'PATCH',
       body: JSON.stringify({ action }),
-    }),
+    })),
 }
 
 // Worships API

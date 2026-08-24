@@ -39,10 +39,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     data: platforms,
     isLoading: loading,
     optimisticMutate,
-  } = useCrudQuery<Platform>('platforms', async () => {
-    const page = await platformsApi.getAll();
-    return page.content.map((item) => ({ ...item, id: String(item.platformId) }));
-  });
+  } = useCrudQuery<Platform>('platforms', async () => (await platformsApi.getAll()).content);
 
   const addPlatform = async (data: PlatformSaveRequest) => {
     // 서버가 만든 실제 id를 알아야 목록에 정확히 반영되므로, 낙관적 추가 없이 성공 후 재조회한다.

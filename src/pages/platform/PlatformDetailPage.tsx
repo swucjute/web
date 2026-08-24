@@ -70,8 +70,8 @@ export function PlatformDetailPage() {
             <ArrowLeft size={20} className="text-gray-700" />
           </button>
           <span className="font-bold text-gray-900 text-base flex-1 line-clamp-1">{platform.title}</span>
-          {(isAdmin() || isProposer) && platform.approvalStatus === 'PENDING' && (
-            <button onClick={() => navigate(`/platform/edit/${platform.id}`)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition">
+          {(isAdmin() || isProposer) && (
+            <button onClick={() => navigate(`/platform/edit/${id}`)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition">
               <Pencil size={15} className="text-gray-500" />
             </button>
           )}
