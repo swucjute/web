@@ -152,10 +152,17 @@ export interface Prayer {
 }
 
 // --- Platform (백엔드 도메인 모양 그대로) ---
-// 백엔드는 approvalStatus(승인여부)와 operatingStatus(운영상태)를 각각 하나의 값만 가진다.
-// (예전 프론트는 여러 상태를 배열로 동시에 가질 수 있게 설계됐었는데, 실제 백엔드 기준으로 단순화했다.)
+// approvalStatus(승인여부)는 하나의 값만 가지지만, 운영상태는 모집중(recruiting)/운영중(operating)이
+// 서로 독립적인 boolean이라 동시에 켜질 수 있고, closedStatus가 있으면(종료/취소) 되돌릴 수 없이 둘 다 꺼진다.
 export type PlatformApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-export type PlatformOperatingStatus = 'RECRUITING' | 'ACTIVE' | 'CLOSED' | 'FINISHED' | 'CANCELLED';
+export type PlatformClosedStatus = 'FINISHED' | 'CANCELLED';
+export type PlatformOperatingStatusAction =
+  | 'START_RECRUITING'
+  | 'STOP_RECRUITING'
+  | 'START_OPERATING'
+  | 'STOP_OPERATING'
+  | 'FINISH'
+  | 'CANCEL';
 export type PlatformMemberRole = 'OWNER' | 'MANAGER' | 'MEMBER';
 export type PlatformMemberStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
 
@@ -180,7 +187,9 @@ export interface Platform {
   location: string | null;
   posterUrl: string | null;
   approvalStatus: PlatformApprovalStatus;
-  operatingStatus: PlatformOperatingStatus;
+  recruiting: boolean;
+  operating: boolean;
+  closedStatus: PlatformClosedStatus | null;
   approvedMemberCount: number;
   ownerMemberId: number;
   ownerName: string | null;
@@ -202,7 +211,6 @@ export interface PlatformSaveRequest {
   purpose?: string | null;
   etc?: string | null;
   posterUrl?: string | null;
-  operatingStatus?: PlatformOperatingStatus;
 }
 
 export interface PlatformMember {
