@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import type { Platform, PlatformOperatingStatus, PlatformSaveRequest } from '../types';
+import type { Platform, PlatformOperatingStatusAction, PlatformSaveRequest } from '../types';
 import { platformsApi } from '../utils/api';
 import { useCrudQuery } from '../hooks/useCrudQuery';
 
@@ -11,7 +11,25 @@ interface PlatformContextType {
   deletePlatform: (id: string) => Promise<void>;
   approvePlatform: (id: string) => Promise<void>;
   rejectPlatform: (id: string) => Promise<void>;
-  changeOperatingStatus: (id: string, status: PlatformOperatingStatus) => Promise<void>;
+  changeOperatingStatus: (id: string, action: PlatformOperatingStatusAction) => Promise<void>;
+}
+
+/** 운영상태 변경 액션이 로컬 상태에 미치는 효과 (낙관적 업데이트용, 백엔드 엔티티 메서드와 1:1 대응). */
+function applyOperatingStatusAction(platform: Platform, action: PlatformOperatingStatusAction): Platform {
+  switch (action) {
+    case 'START_RECRUITING':
+      return { ...platform, recruiting: true };
+    case 'STOP_RECRUITING':
+      return { ...platform, recruiting: false };
+    case 'START_OPERATING':
+      return { ...platform, operating: true };
+    case 'STOP_OPERATING':
+      return { ...platform, operating: false };
+    case 'FINISH':
+      return { ...platform, recruiting: false, operating: false, closedStatus: 'FINISHED' };
+    case 'CANCEL':
+      return { ...platform, recruiting: false, operating: false, closedStatus: 'CANCELLED' };
+  }
 }
 
 const PlatformContext = createContext<PlatformContextType | undefined>(undefined);
@@ -43,8 +61,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   };
 
   const approvePlatform = async (id: string) => {
+    // 백엔드가 승인 시 모집을 자동으로 시작하므로, 낙관적 업데이트에도 recruiting: true를 반영한다.
     await optimisticMutate(
-      (prev) => prev.map((p) => (p.id === id ? { ...p, approvalStatus: 'APPROVED' } : p)),
+      (prev) => prev.map((p) => (p.id === id ? { ...p, approvalStatus: 'APPROVED', recruiting: true } : p)),
       () => platformsApi.changeApprovalStatus(id, 'APPROVED'),
     );
   };
@@ -56,28 +75,10 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  /**
-   * 운영상태만 바꾸는 API가 따로 없어서, 상세 정보를 먼저 조회해 나머지 필드는 그대로 두고
-   * operatingStatus만 바꿔서 수정(PUT) API로 저장한다. 목록 데이터만으로 바로 PUT하면
-   * content/purpose/etc(목록 응답엔 없는 필드)이 빈 값으로 덮어써지므로 주의.
-   */
-  const changeOperatingStatus = async (id: string, operatingStatus: PlatformOperatingStatus) => {
-    const detail = await platformsApi.getById(id);
-    const body: PlatformSaveRequest = {
-      title: detail.title,
-      scheduleText: detail.scheduleText,
-      startsAt: detail.startsAt,
-      endsAt: detail.endsAt,
-      location: detail.location,
-      content: detail.content,
-      purpose: detail.purpose,
-      etc: detail.etc,
-      posterUrl: detail.posterUrl,
-      operatingStatus,
-    };
+  const changeOperatingStatus = async (id: string, action: PlatformOperatingStatusAction) => {
     await optimisticMutate(
-      (prev) => prev.map((p) => (p.id === id ? { ...p, operatingStatus } : p)),
-      () => platformsApi.update(id, body),
+      (prev) => prev.map((p) => (p.id === id ? applyOperatingStatusAction(p, action) : p)),
+      () => platformsApi.changeOperatingStatus(id, action),
     );
   };
 

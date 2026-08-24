@@ -4,7 +4,7 @@
 // (platformsApi만 예외 — 실제 백엔드로 교체 완료, 파일 하단 참고)
 
 import { apiRequest } from './authClient'
-import type { Platform, PlatformSaveRequest, PageResponse } from '../types'
+import type { Platform, PlatformSaveRequest, PlatformOperatingStatusAction, PageResponse } from '../types'
 
 // Members API
 export const membersApi = {
@@ -108,7 +108,9 @@ export const eventsApi = {
 // (다른 Api들과 달리 이제 MSW 목업을 거치지 않는다: 절대경로 + 다른 오리진이라 MSW가 가로채지 않음)
 interface PlatformListParams {
   approvalStatus?: string
-  operatingStatus?: string
+  recruiting?: boolean
+  operating?: boolean
+  closedStatus?: string
   keyword?: string
 }
 
@@ -116,7 +118,9 @@ export const platformsApi = {
   getAll: (params: PlatformListParams = {}) => {
     const qs = new URLSearchParams({ page: '0', size: '100' })
     if (params.approvalStatus) qs.set('approvalStatus', params.approvalStatus)
-    if (params.operatingStatus) qs.set('operatingStatus', params.operatingStatus)
+    if (params.recruiting !== undefined) qs.set('recruiting', String(params.recruiting))
+    if (params.operating !== undefined) qs.set('operating', String(params.operating))
+    if (params.closedStatus) qs.set('closedStatus', params.closedStatus)
     if (params.keyword) qs.set('keyword', params.keyword)
     return apiRequest<PageResponse<Platform>>(`/api/v1/platforms?${qs.toString()}`)
   },
@@ -130,6 +134,11 @@ export const platformsApi = {
     apiRequest<Platform>(`/api/v1/platforms/${id}/approval-status`, {
       method: 'PATCH',
       body: JSON.stringify({ approvalStatus }),
+    }),
+  changeOperatingStatus: (id: string, action: PlatformOperatingStatusAction) =>
+    apiRequest<Platform>(`/api/v1/platforms/${id}/operating-status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action }),
     }),
 }
 
