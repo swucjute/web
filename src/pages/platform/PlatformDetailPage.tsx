@@ -3,25 +3,12 @@ import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
 import { usePlatformDetail } from '../../hooks/usePlatformDetail';
-import type { PlatformOperatingStatus } from '../../types';
+import { platformStatusBadges } from '../../utils/platformStatus';
 import {
   ArrowLeft, Users, Clock, FileText, Target, StickyNote,
   LayoutGrid, Pencil,
   CheckCircle2, XCircle, Heart, MessageCircle, Image as ImageIcon, Grid3x3, MapPin,
 } from 'lucide-react';
-
-const approvalStatusMeta = {
-  PENDING:  { label: '승인 대기', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' },
-  REJECTED: { label: '반려됨',   color: 'bg-red-100 text-red-700',      dot: 'bg-red-400'    },
-};
-
-const operatingStatusMeta: Record<PlatformOperatingStatus, { label: string; color: string; dot: string }> = {
-  RECRUITING: { label: '모집중',   color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-  ACTIVE:     { label: '운영중',   color: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'  },
-  CLOSED:     { label: '모집종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-  FINISHED:   { label: '운영종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-  CANCELLED:  { label: '취소됨',   color: 'bg-gray-100 text-gray-400',   dot: 'bg-gray-300'  },
-};
 
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | null | undefined }) {
   return (
@@ -68,15 +55,13 @@ export function PlatformDetailPage() {
     );
   }
 
-  const meta = platform.approvalStatus === 'PENDING' || platform.approvalStatus === 'REJECTED'
-    ? approvalStatusMeta[platform.approvalStatus]
-    : operatingStatusMeta[platform.operatingStatus];
+  const badges = platformStatusBadges(platform);
 
   // 실제 카카오 로그인 사용자는 백엔드에 소속 제한이 없으므로 무조건 허용, 목업 로그인만 소속으로 체크
   const isYouthMember =
     currentUser?.authSource === 'kakao' || currentUser?.department === '청년부';
   const isProposer = currentUser?.id === String(platform.ownerMemberId);
-  const isRecruiting = platform.approvalStatus === 'APPROVED' && platform.operatingStatus === 'RECRUITING';
+  const isRecruiting = platform.approvalStatus === 'APPROVED' && platform.recruiting;
 
   const handleApprove = async () => {
     await approvePlatform(platform.id);
@@ -116,10 +101,14 @@ export function PlatformDetailPage() {
               <span className="text-sm">포스터 없음</span>
             </div>
           )}
-          <span className={`absolute bottom-3 left-3 flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${meta.color} shadow-lg`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-            {meta.label}
-          </span>
+          <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
+            {badges.map((badge) => (
+              <span key={badge.label} className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${badge.color} shadow-lg`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                {badge.label}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col">

@@ -2,32 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
-import type { Platform, PlatformOperatingStatus } from '../../types';
+import type { Platform } from '../../types';
+import { platformStatusBadges } from '../../utils/platformStatus';
 import {
   Plus, Users, LayoutGrid, ChevronRight,
   Image as ImageIcon, FileText, Heart, MessageCircle, Grid3x3, MapPin,
 } from 'lucide-react';
 
-const operatingStatusMeta: Record<PlatformOperatingStatus, { label: string; color: string; dot: string }> = {
-  RECRUITING: { label: '모집중',   color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-  ACTIVE:     { label: '운영중',   color: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'  },
-  CLOSED:     { label: '모집종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-  FINISHED:   { label: '운영종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-  CANCELLED:  { label: '취소됨',   color: 'bg-gray-100 text-gray-400',   dot: 'bg-gray-300'  },
-};
-
-function getStatusDisplay(platform: Platform) {
-  if (platform.approvalStatus === 'PENDING') {
-    return { label: '승인 대기', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' };
-  }
-  if (platform.approvalStatus === 'REJECTED') {
-    return { label: '반려됨', color: 'bg-red-100 text-red-700', dot: 'bg-red-400' };
-  }
-  return operatingStatusMeta[platform.operatingStatus];
-}
-
 function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () => void }) {
-  const statusMeta = getStatusDisplay(platform);
+  const badges = platformStatusBadges(platform);
 
   return (
     <button
@@ -46,9 +29,13 @@ function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () =
             <span className="text-xs">포스터 없음</span>
           </div>
         )}
-        <div className={`absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusMeta.color}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.dot}`} />
-          {statusMeta.label}
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+          {badges.map((badge) => (
+            <div key={badge.label} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${badge.color}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+              {badge.label}
+            </div>
+          ))}
         </div>
       </div>
       <div className="px-4 py-3">
@@ -104,10 +91,11 @@ export function PlatformPage() {
   const isYouthMember =
     currentUser?.authSource === 'kakao' || currentUser?.department === '청년부';
 
+  // 모집중/운영중은 서로 독립적이라 같은 플랫폼이 두 탭에 동시에 나타날 수 있다(의도된 동작).
   const approved = platforms.filter((p) => p.approvalStatus === 'APPROVED');
-  const recruiting = approved.filter((p) => p.operatingStatus === 'RECRUITING');
-  const operating  = approved.filter((p) => p.operatingStatus === 'ACTIVE');
-  const ended      = approved.filter((p) => p.operatingStatus === 'CLOSED' || p.operatingStatus === 'FINISHED' || p.operatingStatus === 'CANCELLED');
+  const recruiting = approved.filter((p) => p.recruiting);
+  const operating  = approved.filter((p) => p.operating);
+  const ended      = approved.filter((p) => p.closedStatus !== null);
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'recruiting', label: '모집중',  count: recruiting.length },
