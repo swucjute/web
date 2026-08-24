@@ -65,8 +65,8 @@ export function MyPlatformsPage() {
             </div>
           </div>
 
-          {/* 상태 변경 — 내가 제안한 플랫폼 중 승인되고 아직 종료되지 않은 경우 */}
-          {isOwner && p.approvalStatus === 'APPROVED' && p.closedStatus === null && (
+          {/* 상태 변경 — 내가 제안한 플랫폼 중 승인된 경우 */}
+          {isOwner && p.approvalStatus === 'APPROVED' && (
             <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
               <button
                 onClick={() => changeOperatingStatus(p.id, p.recruiting ? 'STOP_RECRUITING' : 'START_RECRUITING')}
@@ -86,7 +86,9 @@ export function MyPlatformsPage() {
               </button>
               <button
                 onClick={() => changeOperatingStatus(p.id, 'FINISH')}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-500 transition"
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                  p.closedStatus !== null ? 'bg-gray-200 text-gray-600 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
+                }`}
               >
                 종료
               </button>

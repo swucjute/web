@@ -18,11 +18,11 @@ interface PlatformContextType {
 function applyOperatingStatusAction(platform: Platform, action: PlatformOperatingStatusAction): Platform {
   switch (action) {
     case 'START_RECRUITING':
-      return { ...platform, recruiting: true };
+      return { ...platform, recruiting: true, closedStatus: null };
     case 'STOP_RECRUITING':
       return { ...platform, recruiting: false };
     case 'START_OPERATING':
-      return { ...platform, operating: true };
+      return { ...platform, operating: true, closedStatus: null };
     case 'STOP_OPERATING':
       return { ...platform, operating: false };
     case 'FINISH':

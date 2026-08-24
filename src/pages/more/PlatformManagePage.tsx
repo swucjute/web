@@ -110,32 +110,32 @@ export function PlatformManagePage() {
                     </div>
                   </div>
                 </div>
-                {p.closedStatus === null && (
-                  <div className="flex gap-1.5 flex-wrap">
-                    <button
-                      onClick={() => changeOperatingStatus(p.id, p.recruiting ? 'STOP_RECRUITING' : 'START_RECRUITING')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-                        p.recruiting ? 'bg-green-100 text-green-700 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      모집중
-                    </button>
-                    <button
-                      onClick={() => changeOperatingStatus(p.id, p.operating ? 'STOP_OPERATING' : 'START_OPERATING')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-                        p.operating ? 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      운영중
-                    </button>
-                    <button
-                      onClick={() => changeOperatingStatus(p.id, 'FINISH')}
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-500 transition"
-                    >
-                      종료
-                    </button>
-                  </div>
-                )}
+                <div className="flex gap-1.5 flex-wrap">
+                  <button
+                    onClick={() => changeOperatingStatus(p.id, p.recruiting ? 'STOP_RECRUITING' : 'START_RECRUITING')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                      p.recruiting ? 'bg-green-100 text-green-700 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    모집중
+                  </button>
+                  <button
+                    onClick={() => changeOperatingStatus(p.id, p.operating ? 'STOP_OPERATING' : 'START_OPERATING')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                      p.operating ? 'bg-blue-100 text-blue-700 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    운영중
+                  </button>
+                  <button
+                    onClick={() => changeOperatingStatus(p.id, 'FINISH')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                      p.closedStatus !== null ? 'bg-gray-200 text-gray-600 ring-1 ring-inset ring-current' : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    종료
+                  </button>
+                </div>
               </div>
             ))}
           </div>
