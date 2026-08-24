@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { usePlatform } from '../../contexts/PlatformContext';
 import { usePlatformDetail } from '../../hooks/usePlatformDetail';
 import { platformStatusBadges } from '../../utils/platformStatus';
 import {
   ArrowLeft, Users, Clock, FileText, Target, StickyNote,
   LayoutGrid, Pencil,
-  CheckCircle2, XCircle, Heart, MessageCircle, Image as ImageIcon, Grid3x3, MapPin,
+  Heart, MessageCircle, Image as ImageIcon, Grid3x3, MapPin,
 } from 'lucide-react';
 
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | null | undefined }) {
@@ -31,7 +30,6 @@ export function PlatformDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser, isAdmin } = useAuth();
-  const { approvePlatform, rejectPlatform } = usePlatform();
   const { data: platform, isLoading } = usePlatformDetail(id);
 
   const [activeTab, setActiveTab] = useState<'info' | 'activity'>('info');
@@ -62,16 +60,6 @@ export function PlatformDetailPage() {
     currentUser?.authSource === 'kakao' || currentUser?.department === '청년부';
   const isProposer = currentUser?.id === String(platform.ownerMemberId);
   const isRecruiting = platform.approvalStatus === 'APPROVED' && platform.recruiting;
-
-  const handleApprove = async () => {
-    await approvePlatform(platform.id);
-    navigate(-1);
-  };
-
-  const handleReject = async () => {
-    await rejectPlatform(platform.id);
-    navigate(-1);
-  };
 
   return (
     <div className="flex flex-col min-h-full bg-gray-50">
@@ -199,18 +187,6 @@ export function PlatformDetailPage() {
                 {isRecruiting && isYouthMember && (
                   <div className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gray-100 text-gray-400 font-bold text-sm">
                     <Clock size={16} />참여 신청 기능 준비 중
-                  </div>
-                )}
-
-                {/* Admin approve / reject */}
-                {isAdmin() && platform.approvalStatus === 'PENDING' && (
-                  <div className="flex gap-3">
-                    <button onClick={handleApprove} className="flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-2xl bg-green-500 text-white font-bold text-sm active:bg-green-600 transition">
-                      <CheckCircle2 size={16} />승인
-                    </button>
-                    <button onClick={handleReject} className="flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-2xl bg-red-500 text-white font-bold text-sm active:bg-red-600 transition">
-                      <XCircle size={16} />반려
-                    </button>
                   </div>
                 )}
               </>
