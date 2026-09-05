@@ -100,55 +100,6 @@ export const eventsApi = {
   },
 }
 
-// Platforms API
-export const platformsApi = {
-  getAll: async () => {
-    const res = await fetch('/api/platforms')
-    return res.json()
-  },
-  getList: async () => {
-    const res = await fetch('/api/platforms')
-    return res.json()
-  },
-  getById: async (id: string) => {
-    const res = await fetch(`/api/platforms/${id}`)
-    if (res.status === 404) return null
-    return res.json()
-  },
-  add: async (data: unknown) => {
-    const res = await fetch('/api/platforms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-    return res.json()
-  },
-  create: async (data: unknown) => {
-    const res = await fetch('/api/platforms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-    return res.json()
-  },
-  update: async (id: string, data: unknown) => {
-    const res = await fetch(`/api/platforms/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-    return res.json()
-  },
-  remove: async (id: string) => {
-    await fetch(`/api/platforms/${id}`, { method: 'DELETE' })
-    return null
-  },
-  delete: async (id: string) => {
-    await fetch(`/api/platforms/${id}`, { method: 'DELETE' })
-    return null
-  },
-}
-
 // Worships API
 export const worshipsApi = {
   getAll: async () => {

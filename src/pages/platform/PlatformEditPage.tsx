@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
+import { usePlatformDetail } from '../../hooks/usePlatformDetail';
 import {
   ArrowLeft, Type, Clock, FileText, Target,
-  StickyNote, ImagePlus, X, Send, CheckCircle2, MapPin,
+  StickyNote, ImagePlus, X, Send, MapPin,
 } from 'lucide-react';
 
 const inputBase =
@@ -29,20 +30,36 @@ function Field({ label, required, icon, children }: FieldProps) {
   );
 }
 
-export function PlatformProposePage() {
+export function PlatformEditPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
-  const { addPlatform } = usePlatform();
+  const { currentUser, isAdmin } = useAuth();
+  const { updatePlatform } = usePlatform();
+  const { data: platform, isLoading } = usePlatformDetail(id);
 
   const [form, setForm] = useState({ title: '', scheduledDate: '', location: '', content: '', purpose: '', other: '' });
   const [posterFile, setPosterFile] = useState<string>('');
   const [posterPreview, setPosterPreview] = useState<string>('');
-  const [submitted, setSubmitted] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 실제 카카오 로그인 사용자는 백엔드에 소속 제한이 없으므로 무조건 허용, 목업 로그인만 소속으로 체크
-  const isYouthMember =
-    currentUser?.authSource === 'kakao' || currentUser?.department === '청년부';
+  // 상세 데이터가 도착하면 폼 초기값을 한 번만 채운다.
+  useEffect(() => {
+    if (platform && !initialized) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForm({
+        title: platform.title,
+        scheduledDate: platform.scheduleText ?? '',
+        location: platform.location ?? '',
+        content: platform.content ?? '',
+        purpose: platform.purpose ?? '',
+        other: platform.etc ?? '',
+      });
+      setPosterPreview(platform.posterUrl ?? '');
+      setPosterFile(platform.posterUrl ?? '');
+      setInitialized(true);
+    }
+  }, [platform, initialized]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -58,8 +75,8 @@ export function PlatformProposePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
-    await addPlatform({
+    if (!id) return;
+    await updatePlatform(id, {
       title: form.title,
       scheduleText: form.scheduledDate,
       location: form.location,
@@ -68,36 +85,21 @@ export function PlatformProposePage() {
       etc: form.other,
       posterUrl: posterFile || undefined,
     });
-    setSubmitted(true);
+    navigate(`/platform/${id}`);
   };
 
-  if (!isYouthMember) {
+  if (isLoading || !initialized || !platform) {
     return (
-      <div className="flex flex-col min-h-full items-center justify-center text-center px-8 gap-4">
-        <p className="text-gray-400 text-sm">청년부 소속 회원만 플랫폼을 제안할 수 있습니다.</p>
-        <button onClick={() => navigate(-1)} className="text-blue-500 text-sm font-medium">돌아가기</button>
+      <div className="flex items-center justify-center min-h-full py-20 text-gray-400 text-sm">
+        불러오는 중...
       </div>
     );
   }
 
-  if (submitted) {
-    return (
-      <div className="flex flex-col min-h-full items-center justify-center text-center px-8 gap-5">
-        <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-          <CheckCircle2 size={40} className="text-green-500" />
-        </div>
-        <div>
-          <p className="font-bold text-gray-800 text-lg mb-1">제안이 접수되었습니다!</p>
-          <p className="text-sm text-gray-500">
-            관리자 승인 후 모집을 시작할 수 있습니다.
-            <br />승인까지 1~3일 정도 소요될 수 있습니다.
-          </p>
-        </div>
-        <button onClick={() => navigate('/platform')} className="mt-2 bg-blue-600 text-white px-8 py-3 rounded-2xl text-sm font-semibold active:bg-blue-700 transition">
-          플랫폼 목록으로
-        </button>
-      </div>
-    );
+  const isOwner = String(platform.ownerMemberId) === currentUser?.id;
+  if (!isOwner && !isAdmin()) {
+    navigate(-1);
+    return null;
   }
 
   return (
@@ -108,7 +110,7 @@ export function PlatformProposePage() {
           <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition">
             <ArrowLeft size={20} className="text-gray-700" />
           </button>
-          <span className="font-bold text-gray-900 text-base flex-1">플랫폼 제안하기</span>
+          <span className="font-bold text-gray-900 text-base flex-1">플랫폼 수정</span>
         </div>
       </div>
 
@@ -166,13 +168,9 @@ export function PlatformProposePage() {
           </Field>
         </div>
 
-        <div className="bg-blue-50 rounded-xl px-4 py-3 text-xs text-blue-600 leading-relaxed">
-          💡 제출 후 관리자 검토를 거쳐 승인되면 모집이 시작됩니다. 승인까지 1~3일이 소요될 수 있습니다.
-        </div>
-
         <button type="submit" className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-blue-600 text-white font-bold text-sm active:bg-blue-700 transition shadow-sm">
           <Send size={16} />
-          제안 제출하기
+          수정 완료
         </button>
 
         <div className="h-4" />

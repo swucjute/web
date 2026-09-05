@@ -107,6 +107,27 @@ export async function getMyProfile(): Promise<MemberMeResponse> {
   return body.data
 }
 
+// 인증 헤더 자동 첨부 + 401 시 토큰 재발급까지 처리하는 fetchWithAuth 위에서,
+// {status,message,data} 응답 껍데기를 벗겨서 data만 돌려주는 공용 헬퍼.
+export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers)
+  if (options.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+  const res = await fetchWithAuth(path, { ...options, headers })
+
+  let body: ApiEnvelope<T> | null = null
+  try {
+    body = await res.json()
+  } catch {
+    // 본문 없는 응답 (204 등)
+  }
+  if (!res.ok) {
+    throw new Error(body?.message ?? `요청 실패 (${res.status})`)
+  }
+  return (body as ApiEnvelope<T>).data
+}
+
 export async function logoutRequest(): Promise<void> {
   const refreshToken = getRefreshToken()
   try {

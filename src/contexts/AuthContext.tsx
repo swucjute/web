@@ -16,7 +16,6 @@ function memberToUser(member: MemberMeResponse): User {
     id: String(member.memberId),
     name: member.profile?.name ?? '',
     email: member.email ?? '',
-    password: '',
     role: MEMBER_ROLE_MAP[member.role],
     phone: member.profile?.phoneNumber ?? '',
     birthDate: member.profile?.birthDate ?? '',
@@ -27,6 +26,7 @@ function memberToUser(member: MemberMeResponse): User {
     accountNumber: member.profile?.accountNumber ?? undefined,
     isActive: member.status === 'ACTIVE',
     isPending: member.status !== 'ACTIVE',
+    authSource: 'kakao',
   };
 }
 
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('currentUser', JSON.stringify(refreshed));
       }
     }
-  }, [users]);
+  }, [currentUser, users]);
 
   const login = (email: string, password: string): boolean => {
     const user = users.find(

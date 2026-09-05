@@ -3,31 +3,14 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlatform } from '../../contexts/PlatformContext';
 import type { Platform } from '../../types';
+import { platformStatusBadges } from '../../utils/platformStatus';
 import {
   Plus, Users, LayoutGrid, ChevronRight,
   Image as ImageIcon, FileText, Heart, MessageCircle, Grid3x3, MapPin,
 } from 'lucide-react';
 
 function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () => void }) {
-  const getStatusDisplay = () => {
-    if (platform.lifecycle === 'pending') {
-      return { label: '승인 대기', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' };
-    }
-    const activeStates = platform.activeStates || [];
-    if (activeStates.length === 0) {
-      return { label: '활성', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' };
-    }
-    const meta: Record<string, { label: string; color: string; dot: string }> = {
-      recruiting: { label: '모집중',   color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-      operating:  { label: '운영중',   color: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-500'  },
-      ended:      { label: '운영종료', color: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400'  },
-    };
-    if (activeStates.length === 1) return meta[activeStates[0]];
-    const labels = activeStates.map((s) => meta[s].label).join('·');
-    return { label: labels, color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' };
-  };
-
-  const statusMeta = getStatusDisplay();
+  const badges = platformStatusBadges(platform);
 
   return (
     <button
@@ -46,15 +29,19 @@ function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () =
             <span className="text-xs">포스터 없음</span>
           </div>
         )}
-        <div className={`absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusMeta.color}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.dot}`} />
-          {statusMeta.label}
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+          {badges.map((badge) => (
+            <div key={badge.label} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${badge.color}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+              {badge.label}
+            </div>
+          ))}
         </div>
       </div>
       <div className="px-4 py-3">
         <p className="font-bold text-gray-900 text-sm mb-1 line-clamp-1">{platform.title}</p>
         <div className="space-y-0.5 mb-2">
-          <p className="text-xs text-gray-500 line-clamp-1">{platform.scheduledDate}</p>
+          <p className="text-xs text-gray-500 line-clamp-1">{platform.scheduleText}</p>
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <MapPin size={11} />
             <span className="line-clamp-1">{platform.location}</span>
@@ -63,7 +50,7 @@ function PlatformCard({ platform, onPress }: { platform: Platform; onPress: () =
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <Users size={12} />
-            <span>{(platform.participants || []).length + 1}명 참여</span>
+            <span>{platform.approvedMemberCount}명 참여</span>
           </div>
           <div className="flex items-center gap-0.5 text-xs text-blue-500 font-medium">
             <span>자세히</span>
@@ -100,11 +87,15 @@ export function PlatformPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('recruiting');
   const [activityView, setActivityView] = useState<'grid' | 'detail'>('grid');
 
-  const isYouthMember = currentUser?.department === '청년부';
+  // 실제 카카오 로그인 사용자는 백엔드에 소속 제한이 없으므로 무조건 허용, 목업 로그인만 소속으로 체크
+  const isYouthMember =
+    currentUser?.authSource === 'kakao' || currentUser?.department === '청년부';
 
-  const recruiting = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('recruiting'));
-  const operating  = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('operating'));
-  const ended      = platforms.filter((p) => p.lifecycle === 'active' && (p.activeStates || []).includes('ended'));
+  // 모집중/운영중은 서로 독립적이라 같은 플랫폼이 두 탭에 동시에 나타날 수 있다(의도된 동작).
+  const approved = platforms.filter((p) => p.approvalStatus === 'APPROVED');
+  const recruiting = approved.filter((p) => p.recruiting);
+  const operating  = approved.filter((p) => p.operating);
+  const ended      = approved.filter((p) => p.closedStatus !== null);
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'recruiting', label: '모집중',  count: recruiting.length },

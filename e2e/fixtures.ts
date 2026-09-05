@@ -20,9 +20,9 @@ export async function login(page: Page, role: keyof typeof TEST_ACCOUNTS = 'admi
 
 // 로그인된 상태로 시작하는 픽스처
 export const test = base.extend<{ loggedInPage: Page }>({
-  loggedInPage: async ({ page }, use) => {
+  loggedInPage: async ({ page }, provide) => {
     await login(page)
-    await use(page)
+    await provide(page)
   },
 })
 

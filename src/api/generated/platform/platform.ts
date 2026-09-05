@@ -25,10 +25,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ApiResponseObject,
+  ApiResponsePageResponsePlatformListItemResponse,
+  ApiResponsePageResponsePlatformMemberResponse,
+  ApiResponsePlatformDetailResponse,
+  ApiResponsePlatformMemberResponse,
+  ApiResponseVoid,
   GetMembersParams,
   GetPlatformsParams,
+  PlatformApprovalStatusUpdateRequest,
   PlatformMemberStatusUpdateRequest,
+  PlatformOperatingStatusUpdateRequest,
   PlatformSaveRequest
 } from '../../model';
 
@@ -51,9 +57,9 @@ export const getGetPlatformUrl = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}`
 }
 
-export const getPlatform = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const getPlatform = async (platformId: number, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetPlatformUrl(platformId),
+  return apiClient<ApiResponsePlatformDetailResponse>(getGetPlatformUrl(platformId),
   {      
     ...options,
     method: 'GET'
@@ -147,9 +153,9 @@ export const getUpdate1Url = (platformId: number,) => {
 }
 
 export const update1 = async (platformId: number,
-    platformSaveRequest: PlatformSaveRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+    platformSaveRequest: PlatformSaveRequest, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getUpdate1Url(platformId),
+  return apiClient<ApiResponsePlatformDetailResponse>(getUpdate1Url(platformId),
   {      
     ...options,
     method: 'PUT',
@@ -218,9 +224,9 @@ export const getDelete1Url = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}`
 }
 
-export const delete1 = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const delete1 = async (platformId: number, options?: RequestInit): Promise<ApiResponseVoid> => {
   
-  return apiClient<ApiResponseObject>(getDelete1Url(platformId),
+  return apiClient<ApiResponseVoid>(getDelete1Url(platformId),
   {      
     ...options,
     method: 'DELETE'
@@ -295,9 +301,9 @@ export const getGetPlatformsUrl = (params?: GetPlatformsParams,) => {
   return stringifiedParams.length > 0 ? `/api/v1/platforms?${stringifiedParams}` : `/api/v1/platforms`
 }
 
-export const getPlatforms = async (params?: GetPlatformsParams, options?: RequestInit): Promise<ApiResponseObject> => {
+export const getPlatforms = async (params?: GetPlatformsParams, options?: RequestInit): Promise<ApiResponsePageResponsePlatformListItemResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetPlatformsUrl(params),
+  return apiClient<ApiResponsePageResponsePlatformListItemResponse>(getGetPlatformsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -390,9 +396,9 @@ export const getCreate1Url = () => {
   return `/api/v1/platforms`
 }
 
-export const create1 = async (platformSaveRequest: PlatformSaveRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+export const create1 = async (platformSaveRequest: PlatformSaveRequest, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getCreate1Url(),
+  return apiClient<ApiResponsePlatformDetailResponse>(getCreate1Url(),
   {      
     ...options,
     method: 'POST',
@@ -470,9 +476,9 @@ export const getGetMembersUrl = (platformId: number,
 }
 
 export const getMembers = async (platformId: number,
-    params?: GetMembersParams, options?: RequestInit): Promise<ApiResponseObject> => {
+    params?: GetMembersParams, options?: RequestInit): Promise<ApiResponsePageResponsePlatformMemberResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetMembersUrl(platformId,params),
+  return apiClient<ApiResponsePageResponsePlatformMemberResponse>(getGetMembersUrl(platformId,params),
   {      
     ...options,
     method: 'GET'
@@ -571,9 +577,9 @@ export const getJoinUrl = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}/members`
 }
 
-export const join = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const join = async (platformId: number, options?: RequestInit): Promise<ApiResponsePlatformMemberResponse> => {
   
-  return apiClient<ApiResponseObject>(getJoinUrl(platformId),
+  return apiClient<ApiResponsePlatformMemberResponse>(getJoinUrl(platformId),
   {      
     ...options,
     method: 'POST'
@@ -631,6 +637,78 @@ export const useJoin = <TError = ErrorType<unknown>,
       return useMutation(mutationOptions , queryClient);
     }
     /**
+ * @summary 플랫폼 운영상태 변경 (모집/운영 토글, 종료·취소)
+ */
+export const getUpdateOperatingStatusUrl = (platformId: number,) => {
+
+
+  
+
+  return `/api/v1/platforms/${platformId}/operating-status`
+}
+
+export const updateOperatingStatus = async (platformId: number,
+    platformOperatingStatusUpdateRequest: PlatformOperatingStatusUpdateRequest, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
+  
+  return apiClient<ApiResponsePlatformDetailResponse>(getUpdateOperatingStatusUrl(platformId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      platformOperatingStatusUpdateRequest,)
+  }
+);}
+
+
+
+
+export const getUpdateOperatingStatusMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOperatingStatus>>, TError,{platformId: number;data: BodyType<PlatformOperatingStatusUpdateRequest>}, TContext>, request?: SecondParameter<typeof apiClient>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOperatingStatus>>, TError,{platformId: number;data: BodyType<PlatformOperatingStatusUpdateRequest>}, TContext> => {
+
+const mutationKey = ['updateOperatingStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOperatingStatus>>, {platformId: number;data: BodyType<PlatformOperatingStatusUpdateRequest>}> = (props) => {
+          const {platformId,data} = props ?? {};
+
+          return  updateOperatingStatus(platformId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOperatingStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateOperatingStatus>>>
+    export type UpdateOperatingStatusMutationBody = BodyType<PlatformOperatingStatusUpdateRequest>
+    export type UpdateOperatingStatusMutationError = ErrorType<unknown>
+
+    /**
+ * @summary 플랫폼 운영상태 변경 (모집/운영 토글, 종료·취소)
+ */
+export const useUpdateOperatingStatus = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOperatingStatus>>, TError,{platformId: number;data: BodyType<PlatformOperatingStatusUpdateRequest>}, TContext>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateOperatingStatus>>,
+        TError,
+        {platformId: number;data: BodyType<PlatformOperatingStatusUpdateRequest>},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdateOperatingStatusMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    /**
  * @summary 플랫폼 멤버 상태 변경
  */
 export const getUpdateMemberStatusUrl = (platformId: number,
@@ -644,9 +722,9 @@ export const getUpdateMemberStatusUrl = (platformId: number,
 
 export const updateMemberStatus = async (platformId: number,
     memberId: number,
-    platformMemberStatusUpdateRequest: PlatformMemberStatusUpdateRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+    platformMemberStatusUpdateRequest: PlatformMemberStatusUpdateRequest, options?: RequestInit): Promise<ApiResponsePlatformMemberResponse> => {
   
-  return apiClient<ApiResponseObject>(getUpdateMemberStatusUrl(platformId,memberId),
+  return apiClient<ApiResponsePlatformMemberResponse>(getUpdateMemberStatusUrl(platformId,memberId),
   {      
     ...options,
     method: 'PATCH',
@@ -705,6 +783,173 @@ export const useUpdateMemberStatus = <TError = ErrorType<unknown>,
       return useMutation(mutationOptions , queryClient);
     }
     /**
+ * @summary 플랫폼 승인 상태 변경 (관리자 전용)
+ */
+export const getUpdateApprovalStatusUrl = (platformId: number,) => {
+
+
+  
+
+  return `/api/v1/platforms/${platformId}/approval-status`
+}
+
+export const updateApprovalStatus = async (platformId: number,
+    platformApprovalStatusUpdateRequest: PlatformApprovalStatusUpdateRequest, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
+  
+  return apiClient<ApiResponsePlatformDetailResponse>(getUpdateApprovalStatusUrl(platformId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      platformApprovalStatusUpdateRequest,)
+  }
+);}
+
+
+
+
+export const getUpdateApprovalStatusMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApprovalStatus>>, TError,{platformId: number;data: BodyType<PlatformApprovalStatusUpdateRequest>}, TContext>, request?: SecondParameter<typeof apiClient>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateApprovalStatus>>, TError,{platformId: number;data: BodyType<PlatformApprovalStatusUpdateRequest>}, TContext> => {
+
+const mutationKey = ['updateApprovalStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateApprovalStatus>>, {platformId: number;data: BodyType<PlatformApprovalStatusUpdateRequest>}> = (props) => {
+          const {platformId,data} = props ?? {};
+
+          return  updateApprovalStatus(platformId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateApprovalStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateApprovalStatus>>>
+    export type UpdateApprovalStatusMutationBody = BodyType<PlatformApprovalStatusUpdateRequest>
+    export type UpdateApprovalStatusMutationError = ErrorType<unknown>
+
+    /**
+ * @summary 플랫폼 승인 상태 변경 (관리자 전용)
+ */
+export const useUpdateApprovalStatus = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApprovalStatus>>, TError,{platformId: number;data: BodyType<PlatformApprovalStatusUpdateRequest>}, TContext>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateApprovalStatus>>,
+        TError,
+        {platformId: number;data: BodyType<PlatformApprovalStatusUpdateRequest>},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdateApprovalStatusMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    /**
+ * @summary 내 플랫폼 멤버십 상태 조회
+ */
+export const getGetMyMembershipUrl = (platformId: number,) => {
+
+
+  
+
+  return `/api/v1/platforms/${platformId}/members/me`
+}
+
+export const getMyMembership = async (platformId: number, options?: RequestInit): Promise<ApiResponsePlatformMemberResponse> => {
+  
+  return apiClient<ApiResponsePlatformMemberResponse>(getGetMyMembershipUrl(platformId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+export const getGetMyMembershipQueryKey = (platformId: number,) => {
+    return [`/api/v1/platforms/${platformId}/members/me`] as const;
+    }
+
+    
+export const getGetMyMembershipQueryOptions = <TData = Awaited<ReturnType<typeof getMyMembership>>, TError = ErrorType<unknown>>(platformId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyMembership>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyMembershipQueryKey(platformId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyMembership>>> = ({ signal }) => getMyMembership(platformId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(platformId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyMembership>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMyMembershipQueryResult = NonNullable<Awaited<ReturnType<typeof getMyMembership>>>
+export type GetMyMembershipQueryError = ErrorType<unknown>
+
+
+export function useGetMyMembership<TData = Awaited<ReturnType<typeof getMyMembership>>, TError = ErrorType<unknown>>(
+ platformId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyMembership>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyMembership>>,
+          TError,
+          Awaited<ReturnType<typeof getMyMembership>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyMembership<TData = Awaited<ReturnType<typeof getMyMembership>>, TError = ErrorType<unknown>>(
+ platformId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyMembership>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyMembership>>,
+          TError,
+          Awaited<ReturnType<typeof getMyMembership>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyMembership<TData = Awaited<ReturnType<typeof getMyMembership>>, TError = ErrorType<unknown>>(
+ platformId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyMembership>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary 내 플랫폼 멤버십 상태 조회
+ */
+
+export function useGetMyMembership<TData = Awaited<ReturnType<typeof getMyMembership>>, TError = ErrorType<unknown>>(
+ platformId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyMembership>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMyMembershipQueryOptions(platformId,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
  * @summary 플랫폼 탈퇴
  */
 export const getLeaveUrl = (platformId: number,) => {
@@ -715,9 +960,9 @@ export const getLeaveUrl = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}/members/me`
 }
 
-export const leave = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const leave = async (platformId: number, options?: RequestInit): Promise<ApiResponseVoid> => {
   
-  return apiClient<ApiResponseObject>(getLeaveUrl(platformId),
+  return apiClient<ApiResponseVoid>(getLeaveUrl(platformId),
   {      
     ...options,
     method: 'DELETE'

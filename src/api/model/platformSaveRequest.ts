@@ -7,14 +7,29 @@
  */
 
 export interface PlatformSaveRequest {
-  title?: string;
+  /**
+   * @minLength 0
+   * @maxLength 100
+   */
+  title: string;
+  /**
+   * @minLength 0
+   * @maxLength 200
+   */
   scheduleText?: string;
   startsAt?: string;
   endsAt?: string;
+  /**
+   * @minLength 0
+   * @maxLength 100
+   */
   location?: string;
   content?: string;
   purpose?: string;
   etc?: string;
+  /**
+   * @minLength 0
+   * @maxLength 500
+   */
   posterUrl?: string;
-  operatingStatus?: string;
 }

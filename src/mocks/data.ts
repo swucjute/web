@@ -1,4 +1,4 @@
-import type { User, Event, Platform, Survey, Worship, Praise } from '../types'
+import type { User, Event, Survey, Worship, Praise } from '../types'
 
 // Mock 데이터
 export const mockUsers: User[] = [
@@ -77,55 +77,7 @@ export const mockEvents: Event[] = [
   },
 ]
 
-export const mockPlatforms: Platform[] = [
-  {
-    id: '1',
-    title: '청년 독서 모임',
-    scheduledDate: '2025-06-01',
-    location: '교회 소그룹실',
-    content: '매주 한 권의 책을 읽고 나누는 독서 모임입니다.',
-    purpose: '지식 나눔과 신앙 성장',
-    other: '책은 각자 구매',
-    lifecycle: 'active',
-    activeStates: ['recruiting'],
-    proposedBy: '2',
-    proposedByName: '리더',
-    participants: ['1', '2'],
-    createdAt: '2025-05-01',
-    approvedAt: '2025-05-05',
-  },
-  {
-    id: '2',
-    title: '청년 배드민턴',
-    scheduledDate: '2025-05-20',
-    location: '체육관',
-    content: '매주 토요일 배드민턴 모임',
-    purpose: '친교 및 건강 관리',
-    other: '라켓 대여 가능',
-    lifecycle: 'active',
-    activeStates: ['operating'],
-    proposedBy: '1',
-    proposedByName: '관리자',
-    participants: ['1', '2', '3'],
-    createdAt: '2025-04-10',
-    approvedAt: '2025-04-12',
-  },
-  {
-    id: '3',
-    title: '청년 기도 모임',
-    scheduledDate: '2025-07-01',
-    location: '청년부실',
-    content: '새벽 기도 모임 제안입니다.',
-    purpose: '기도 훈련',
-    other: '',
-    lifecycle: 'pending',
-    activeStates: [],
-    proposedBy: '3',
-    proposedByName: '회원',
-    participants: [],
-    createdAt: '2025-05-20',
-  },
-]
+// platforms는 이제 실제 백엔드(/api/v1/platforms)와 직접 통신하므로 목업 시드 데이터가 필요 없다.
 
 export const mockWorships: Worship[] = [
   {
