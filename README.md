@@ -75,6 +75,22 @@ npm run dev
 
 터미널에 출력된 주소(기본값: `http://localhost:5173`)를 브라우저에서 엽니다. 파일 저장 시 자동으로 브라우저가 새로고침됩니다 (Hot Module Replacement).
 
+### OpenAPI 클라이언트 생성
+
+로컬 백엔드를 먼저 실행한 뒤 Springdoc 명세에서 타입과 React Query 훅을 생성합니다.
+
+```bash
+npm run api:generate
+```
+
+기본 명세 주소는 `http://localhost:8080/v3/api-docs`입니다. 다른 서버의 명세를 사용할 때는 다음처럼 지정합니다.
+
+```bash
+OPENAPI_URL=https://example.com/v3/api-docs npm run api:generate
+```
+
+생성 결과는 `src/api/generated`와 `src/api/model`에 저장됩니다. 생성 파일은 직접 수정하지 않습니다.
+
 ### 3단계: 프로덕션 빌드
 
 배포를 위한 최적화된 빌드를 생성합니다.
