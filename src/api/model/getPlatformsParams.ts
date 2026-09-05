@@ -10,6 +10,8 @@ export type GetPlatformsParams = {
 page?: number;
 size?: number;
 approvalStatus?: string;
-operatingStatus?: string;
+recruiting?: boolean;
+operating?: boolean;
+closedStatus?: string;
 keyword?: string;
 };

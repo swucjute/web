@@ -1,7 +1,16 @@
 import React, { createContext, useContext } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Platform, PlatformOperatingStatusAction, PlatformSaveRequest } from '../types';
-import { platformsApi } from '../utils/api';
-import { useCrudQuery } from '../hooks/useCrudQuery';
+import {
+  useCreate1,
+  useDelete1,
+  useGetPlatforms,
+  useUpdate1,
+  useUpdateApprovalStatus,
+  useUpdateOperatingStatus,
+} from '../api/generated/platform/platform';
+import { toPlatformsFromResponse } from '../api/platformAdapter';
+import type { PlatformSaveRequest as GeneratedPlatformSaveRequest } from '../api/model';
 
 interface PlatformContextType {
   platforms: Platform[];
@@ -14,69 +23,75 @@ interface PlatformContextType {
   changeOperatingStatus: (id: string, action: PlatformOperatingStatusAction) => Promise<void>;
 }
 
-/** 운영상태 변경 액션이 로컬 상태에 미치는 효과 (낙관적 업데이트용, 백엔드 엔티티 메서드와 1:1 대응). */
-function applyOperatingStatusAction(platform: Platform, action: PlatformOperatingStatusAction): Platform {
-  switch (action) {
-    case 'START_RECRUITING':
-      return { ...platform, recruiting: true, closedStatus: null };
-    case 'STOP_RECRUITING':
-      return { ...platform, recruiting: false };
-    case 'START_OPERATING':
-      return { ...platform, operating: true, closedStatus: null };
-    case 'STOP_OPERATING':
-      return { ...platform, operating: false };
-    case 'FINISH':
-      return { ...platform, recruiting: false, operating: false, closedStatus: 'FINISHED' };
-    case 'CANCEL':
-      return { ...platform, recruiting: false, operating: false, closedStatus: 'CANCELLED' };
-  }
-}
-
 const PlatformContext = createContext<PlatformContextType | undefined>(undefined);
 
+const platformListParams = { page: 0, size: 100 } as const;
+
+function toGeneratedRequest(data: PlatformSaveRequest): GeneratedPlatformSaveRequest {
+  return {
+    title: data.title,
+    scheduleText: data.scheduleText ?? undefined,
+    startsAt: data.startsAt ?? undefined,
+    endsAt: data.endsAt ?? undefined,
+    location: data.location ?? undefined,
+    content: data.content ?? undefined,
+    purpose: data.purpose ?? undefined,
+    etc: data.etc ?? undefined,
+    posterUrl: data.posterUrl ?? undefined,
+  };
+}
+
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
-  const {
-    data: platforms,
-    isLoading: loading,
-    optimisticMutate,
-  } = useCrudQuery<Platform>('platforms', async () => (await platformsApi.getAll()).content);
+  const queryClient = useQueryClient();
+  const { data: platforms = [], isLoading: loading } = useGetPlatforms(platformListParams, {
+    query: { select: toPlatformsFromResponse },
+  });
+  const createMutation = useCreate1();
+  const updateMutation = useUpdate1();
+  const deleteMutation = useDelete1();
+  const approvalMutation = useUpdateApprovalStatus();
+  const operatingMutation = useUpdateOperatingStatus();
+
+  const invalidatePlatforms = () =>
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/v1/platforms'),
+    });
 
   const addPlatform = async (data: PlatformSaveRequest) => {
-    // 서버가 만든 실제 id를 알아야 목록에 정확히 반영되므로, 낙관적 추가 없이 성공 후 재조회한다.
-    await optimisticMutate((prev) => prev, () => platformsApi.add(data));
+    await createMutation.mutateAsync({ data: toGeneratedRequest(data) });
+    await invalidatePlatforms();
   };
 
   const updatePlatform = async (id: string, data: PlatformSaveRequest) => {
-    await optimisticMutate(
-      (prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)),
-      () => platformsApi.update(id, data),
-    );
+    await updateMutation.mutateAsync({ platformId: Number(id), data: toGeneratedRequest(data) });
+    await invalidatePlatforms();
   };
 
   const deletePlatform = async (id: string) => {
-    await optimisticMutate((prev) => prev.filter((p) => p.id !== id), () => platformsApi.remove(id));
+    await deleteMutation.mutateAsync({ platformId: Number(id) });
+    await invalidatePlatforms();
   };
 
   const approvePlatform = async (id: string) => {
-    // 백엔드가 승인 시 모집을 자동으로 시작하므로, 낙관적 업데이트에도 recruiting: true를 반영한다.
-    await optimisticMutate(
-      (prev) => prev.map((p) => (p.id === id ? { ...p, approvalStatus: 'APPROVED', recruiting: true } : p)),
-      () => platformsApi.changeApprovalStatus(id, 'APPROVED'),
-    );
+    await approvalMutation.mutateAsync({
+      platformId: Number(id),
+      data: { approvalStatus: 'APPROVED' },
+    });
+    await invalidatePlatforms();
   };
 
   const rejectPlatform = async (id: string) => {
-    await optimisticMutate(
-      (prev) => prev.map((p) => (p.id === id ? { ...p, approvalStatus: 'REJECTED' } : p)),
-      () => platformsApi.changeApprovalStatus(id, 'REJECTED'),
-    );
+    await approvalMutation.mutateAsync({
+      platformId: Number(id),
+      data: { approvalStatus: 'REJECTED' },
+    });
+    await invalidatePlatforms();
   };
 
   const changeOperatingStatus = async (id: string, action: PlatformOperatingStatusAction) => {
-    await optimisticMutate(
-      (prev) => prev.map((p) => (p.id === id ? applyOperatingStatusAction(p, action) : p)),
-      () => platformsApi.changeOperatingStatus(id, action),
-    );
+    await operatingMutation.mutateAsync({ platformId: Number(id), data: { action } });
+    await invalidatePlatforms();
   };
 
   return (
