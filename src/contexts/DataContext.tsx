@@ -153,7 +153,9 @@ function readLocal<T>(key: string, fallback?: T[]): T[] {
       // 빈 배열이고 fallback이 있으면 seed 데이터 사용
       if (parsed.length > 0 || !fallback) return parsed;
     }
-  } catch {}
+  } catch {
+    return fallback ?? [];
+  }
   return fallback ?? [];
 }
 

@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('currentUser', JSON.stringify(refreshed));
       }
     }
-  }, [users]);
+  }, [currentUser, users]);
 
   const login = (email: string, password: string): boolean => {
     const user = users.find(
