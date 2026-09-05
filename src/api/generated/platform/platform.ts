@@ -25,7 +25,11 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ApiResponseObject,
+  ApiResponsePageResponsePlatformListItemResponse,
+  ApiResponsePageResponsePlatformMemberResponse,
+  ApiResponsePlatformDetailResponse,
+  ApiResponsePlatformMemberResponse,
+  ApiResponseVoid,
   GetMembersParams,
   GetPlatformsParams,
   PlatformApprovalStatusUpdateRequest,
@@ -53,9 +57,9 @@ export const getGetPlatformUrl = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}`
 }
 
-export const getPlatform = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const getPlatform = async (platformId: number, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetPlatformUrl(platformId),
+  return apiClient<ApiResponsePlatformDetailResponse>(getGetPlatformUrl(platformId),
   {      
     ...options,
     method: 'GET'
@@ -149,9 +153,9 @@ export const getUpdate1Url = (platformId: number,) => {
 }
 
 export const update1 = async (platformId: number,
-    platformSaveRequest: PlatformSaveRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+    platformSaveRequest: PlatformSaveRequest, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getUpdate1Url(platformId),
+  return apiClient<ApiResponsePlatformDetailResponse>(getUpdate1Url(platformId),
   {      
     ...options,
     method: 'PUT',
@@ -220,9 +224,9 @@ export const getDelete1Url = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}`
 }
 
-export const delete1 = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const delete1 = async (platformId: number, options?: RequestInit): Promise<ApiResponseVoid> => {
   
-  return apiClient<ApiResponseObject>(getDelete1Url(platformId),
+  return apiClient<ApiResponseVoid>(getDelete1Url(platformId),
   {      
     ...options,
     method: 'DELETE'
@@ -297,9 +301,9 @@ export const getGetPlatformsUrl = (params?: GetPlatformsParams,) => {
   return stringifiedParams.length > 0 ? `/api/v1/platforms?${stringifiedParams}` : `/api/v1/platforms`
 }
 
-export const getPlatforms = async (params?: GetPlatformsParams, options?: RequestInit): Promise<ApiResponseObject> => {
+export const getPlatforms = async (params?: GetPlatformsParams, options?: RequestInit): Promise<ApiResponsePageResponsePlatformListItemResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetPlatformsUrl(params),
+  return apiClient<ApiResponsePageResponsePlatformListItemResponse>(getGetPlatformsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -392,9 +396,9 @@ export const getCreate1Url = () => {
   return `/api/v1/platforms`
 }
 
-export const create1 = async (platformSaveRequest: PlatformSaveRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+export const create1 = async (platformSaveRequest: PlatformSaveRequest, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getCreate1Url(),
+  return apiClient<ApiResponsePlatformDetailResponse>(getCreate1Url(),
   {      
     ...options,
     method: 'POST',
@@ -472,9 +476,9 @@ export const getGetMembersUrl = (platformId: number,
 }
 
 export const getMembers = async (platformId: number,
-    params?: GetMembersParams, options?: RequestInit): Promise<ApiResponseObject> => {
+    params?: GetMembersParams, options?: RequestInit): Promise<ApiResponsePageResponsePlatformMemberResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetMembersUrl(platformId,params),
+  return apiClient<ApiResponsePageResponsePlatformMemberResponse>(getGetMembersUrl(platformId,params),
   {      
     ...options,
     method: 'GET'
@@ -573,9 +577,9 @@ export const getJoinUrl = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}/members`
 }
 
-export const join = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const join = async (platformId: number, options?: RequestInit): Promise<ApiResponsePlatformMemberResponse> => {
   
-  return apiClient<ApiResponseObject>(getJoinUrl(platformId),
+  return apiClient<ApiResponsePlatformMemberResponse>(getJoinUrl(platformId),
   {      
     ...options,
     method: 'POST'
@@ -644,9 +648,9 @@ export const getUpdateOperatingStatusUrl = (platformId: number,) => {
 }
 
 export const updateOperatingStatus = async (platformId: number,
-    platformOperatingStatusUpdateRequest: PlatformOperatingStatusUpdateRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+    platformOperatingStatusUpdateRequest: PlatformOperatingStatusUpdateRequest, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getUpdateOperatingStatusUrl(platformId),
+  return apiClient<ApiResponsePlatformDetailResponse>(getUpdateOperatingStatusUrl(platformId),
   {      
     ...options,
     method: 'PATCH',
@@ -718,9 +722,9 @@ export const getUpdateMemberStatusUrl = (platformId: number,
 
 export const updateMemberStatus = async (platformId: number,
     memberId: number,
-    platformMemberStatusUpdateRequest: PlatformMemberStatusUpdateRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+    platformMemberStatusUpdateRequest: PlatformMemberStatusUpdateRequest, options?: RequestInit): Promise<ApiResponsePlatformMemberResponse> => {
   
-  return apiClient<ApiResponseObject>(getUpdateMemberStatusUrl(platformId,memberId),
+  return apiClient<ApiResponsePlatformMemberResponse>(getUpdateMemberStatusUrl(platformId,memberId),
   {      
     ...options,
     method: 'PATCH',
@@ -790,9 +794,9 @@ export const getUpdateApprovalStatusUrl = (platformId: number,) => {
 }
 
 export const updateApprovalStatus = async (platformId: number,
-    platformApprovalStatusUpdateRequest: PlatformApprovalStatusUpdateRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+    platformApprovalStatusUpdateRequest: PlatformApprovalStatusUpdateRequest, options?: RequestInit): Promise<ApiResponsePlatformDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getUpdateApprovalStatusUrl(platformId),
+  return apiClient<ApiResponsePlatformDetailResponse>(getUpdateApprovalStatusUrl(platformId),
   {      
     ...options,
     method: 'PATCH',
@@ -861,9 +865,9 @@ export const getGetMyMembershipUrl = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}/members/me`
 }
 
-export const getMyMembership = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const getMyMembership = async (platformId: number, options?: RequestInit): Promise<ApiResponsePlatformMemberResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetMyMembershipUrl(platformId),
+  return apiClient<ApiResponsePlatformMemberResponse>(getGetMyMembershipUrl(platformId),
   {      
     ...options,
     method: 'GET'
@@ -956,9 +960,9 @@ export const getLeaveUrl = (platformId: number,) => {
   return `/api/v1/platforms/${platformId}/members/me`
 }
 
-export const leave = async (platformId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const leave = async (platformId: number, options?: RequestInit): Promise<ApiResponseVoid> => {
   
-  return apiClient<ApiResponseObject>(getLeaveUrl(platformId),
+  return apiClient<ApiResponseVoid>(getLeaveUrl(platformId),
   {      
     ...options,
     method: 'DELETE'

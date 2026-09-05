@@ -1,25 +1,56 @@
-import type { ApiResponseObject } from './model'
-import type { PageResponse, Platform } from '../types'
+import type {
+  ApiResponsePageResponsePlatformListItemResponse,
+  ApiResponsePlatformDetailResponse,
+  PlatformDetailResponse,
+  PlatformListItemResponse,
+} from './model'
+import type { Platform } from '../types'
 
-type PlatformDto = Omit<Platform, 'id'>
-
-function unwrapData<T>(response: ApiResponseObject): T {
-  if (response.data === undefined) {
-    throw new Error(response.message ?? '플랫폼 API 응답에 data가 없습니다.')
+function required<T>(value: T | null | undefined, field: string): T {
+  if (value === undefined || value === null) {
+    throw new Error(`플랫폼 API 응답에 ${field}가 없습니다.`)
   }
 
-  return response.data as unknown as T
+  return value
 }
 
-export function toPlatform(dto: PlatformDto): Platform {
-  return { ...dto, id: String(dto.platformId) }
+export function toPlatform(dto: PlatformListItemResponse | PlatformDetailResponse): Platform {
+  const platformId = required(dto.platformId, 'platformId')
+
+  return {
+    id: String(platformId),
+    platformId,
+    title: required(dto.title, 'title'),
+    scheduleText: dto.scheduleText ?? null,
+    startsAt: dto.startsAt ?? null,
+    endsAt: dto.endsAt ?? null,
+    location: dto.location ?? null,
+    posterUrl: dto.posterUrl ?? null,
+    approvalStatus: required(dto.approvalStatus, 'approvalStatus'),
+    recruiting: required(dto.recruiting, 'recruiting'),
+    operating: required(dto.operating, 'operating'),
+    closedStatus: dto.closedStatus ?? null,
+    approvedMemberCount: required(dto.approvedMemberCount, 'approvedMemberCount'),
+    ownerMemberId: required(dto.ownerMemberId, 'ownerMemberId'),
+    ownerName: dto.ownerName ?? null,
+    createdAt: required(dto.createdAt, 'createdAt'),
+  }
 }
 
-export function toPlatformFromResponse(response: ApiResponseObject): Platform {
-  return toPlatform(unwrapData<PlatformDto>(response))
+export function toPlatformFromResponse(response: ApiResponsePlatformDetailResponse): Platform {
+  const dto = required(response.data, 'data')
+  return {
+    ...toPlatform(dto),
+    content: dto.content ?? null,
+    purpose: dto.purpose ?? null,
+    etc: dto.etc ?? null,
+    updatedAt: dto.updatedAt,
+  }
 }
 
-export function toPlatformsFromResponse(response: ApiResponseObject): Platform[] {
-  const page = unwrapData<PageResponse<PlatformDto>>(response)
-  return page.content.map(toPlatform)
+export function toPlatformsFromResponse(
+  response: ApiResponsePageResponsePlatformListItemResponse,
+): Platform[] {
+  const page = required(response.data, 'data')
+  return required(page.content, 'data.content').map(toPlatform)
 }
