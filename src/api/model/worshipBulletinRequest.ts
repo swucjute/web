@@ -8,7 +8,19 @@
 
 export interface WorshipBulletinRequest {
   sortOrder?: number;
-  imageUrl?: string;
-  mimeType?: string;
+  /**
+   * @minLength 0
+   * @maxLength 500
+   */
+  imageUrl: string;
+  /**
+   * @minLength 0
+   * @maxLength 50
+   */
+  mimeType: string;
+  /**
+   * @minLength 0
+   * @maxLength 200
+   */
   fileName?: string;
 }

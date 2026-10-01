@@ -25,7 +25,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ApiResponseObject,
+  ApiResponseChurchMemberResponse,
+  ApiResponseMemberMeResponse,
+  ApiResponseMemberProfileResponse,
+  ApiResponseMemberSummaryResponse,
+  ApiResponseVoid,
+  LookupChurchMemberParams,
   MemberProfileRegisterRequest,
   MemberUpdateRequest
 } from '../../model';
@@ -49,9 +54,9 @@ export const getGetMyProfileUrl = () => {
   return `/api/v1/members/me`
 }
 
-export const getMyProfile = async ( options?: RequestInit): Promise<ApiResponseObject> => {
+export const getMyProfile = async ( options?: RequestInit): Promise<ApiResponseMemberMeResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetMyProfileUrl(),
+  return apiClient<ApiResponseMemberMeResponse>(getGetMyProfileUrl(),
   {      
     ...options,
     method: 'GET'
@@ -144,9 +149,9 @@ export const getUpdateMyProfileUrl = () => {
   return `/api/v1/members/me`
 }
 
-export const updateMyProfile = async (memberUpdateRequest: MemberUpdateRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+export const updateMyProfile = async (memberUpdateRequest: MemberUpdateRequest, options?: RequestInit): Promise<ApiResponseMemberProfileResponse> => {
   
-  return apiClient<ApiResponseObject>(getUpdateMyProfileUrl(),
+  return apiClient<ApiResponseMemberProfileResponse>(getUpdateMyProfileUrl(),
   {      
     ...options,
     method: 'PUT',
@@ -215,9 +220,9 @@ export const getWithdrawMeUrl = () => {
   return `/api/v1/members/me`
 }
 
-export const withdrawMe = async ( options?: RequestInit): Promise<ApiResponseObject> => {
+export const withdrawMe = async ( options?: RequestInit): Promise<ApiResponseVoid> => {
   
-  return apiClient<ApiResponseObject>(getWithdrawMeUrl(),
+  return apiClient<ApiResponseVoid>(getWithdrawMeUrl(),
   {      
     ...options,
     method: 'DELETE'
@@ -275,7 +280,7 @@ export const useWithdrawMe = <TError = ErrorType<unknown>,
       return useMutation(mutationOptions , queryClient);
     }
     /**
- * 카카오 로그인 후 실명/성별/생년월일/연락처/소속 등을 직접 입력해 프로필을 생성한다.
+ * 카카오 로그인 후 실명/성별/생년월일/연락처/소속 등을 입력해 프로필을 생성한다. 소속이 청년(YOUTH)이면 교적부(ChurchMember) 매칭이 필수다.
  * @summary 초기 프로필 등록
  */
 export const getRegisterProfileUrl = () => {
@@ -286,9 +291,9 @@ export const getRegisterProfileUrl = () => {
   return `/api/v1/members/me/profile`
 }
 
-export const registerProfile = async (memberProfileRegisterRequest: MemberProfileRegisterRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+export const registerProfile = async (memberProfileRegisterRequest: MemberProfileRegisterRequest, options?: RequestInit): Promise<ApiResponseMemberMeResponse> => {
   
-  return apiClient<ApiResponseObject>(getRegisterProfileUrl(),
+  return apiClient<ApiResponseMemberMeResponse>(getRegisterProfileUrl(),
   {      
     ...options,
     method: 'POST',
@@ -357,9 +362,9 @@ export const getGetMySummaryUrl = () => {
   return `/api/v1/members/me/summary`
 }
 
-export const getMySummary = async ( options?: RequestInit): Promise<ApiResponseObject> => {
+export const getMySummary = async ( options?: RequestInit): Promise<ApiResponseMemberSummaryResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetMySummaryUrl(),
+  return apiClient<ApiResponseMemberSummaryResponse>(getGetMySummaryUrl(),
   {      
     ...options,
     method: 'GET'
@@ -431,6 +436,109 @@ export function useGetMySummary<TData = Awaited<ReturnType<typeof getMySummary>>
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetMySummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * 이름/생년월일/전화번호로 교적부의 기본정보(id/이름/성별/생년월일/전화번호)를 조회한다. 교적부에 없으면 404(CHURCH_MEMBER_NOT_FOUND).
+ * @summary 청년부 등록 조회
+ */
+export const getLookupChurchMemberUrl = (params: LookupChurchMemberParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/members/church-lookup?${stringifiedParams}` : `/api/v1/members/church-lookup`
+}
+
+export const lookupChurchMember = async (params: LookupChurchMemberParams, options?: RequestInit): Promise<ApiResponseChurchMemberResponse> => {
+  
+  return apiClient<ApiResponseChurchMemberResponse>(getLookupChurchMemberUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+export const getLookupChurchMemberQueryKey = (params: LookupChurchMemberParams,) => {
+    return [`/api/v1/members/church-lookup`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const getLookupChurchMemberQueryOptions = <TData = Awaited<ReturnType<typeof lookupChurchMember>>, TError = ErrorType<unknown>>(params: LookupChurchMemberParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupChurchMember>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLookupChurchMemberQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof lookupChurchMember>>> = ({ signal }) => lookupChurchMember(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof lookupChurchMember>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LookupChurchMemberQueryResult = NonNullable<Awaited<ReturnType<typeof lookupChurchMember>>>
+export type LookupChurchMemberQueryError = ErrorType<unknown>
+
+
+export function useLookupChurchMember<TData = Awaited<ReturnType<typeof lookupChurchMember>>, TError = ErrorType<unknown>>(
+ params: LookupChurchMemberParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupChurchMember>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof lookupChurchMember>>,
+          TError,
+          Awaited<ReturnType<typeof lookupChurchMember>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLookupChurchMember<TData = Awaited<ReturnType<typeof lookupChurchMember>>, TError = ErrorType<unknown>>(
+ params: LookupChurchMemberParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupChurchMember>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof lookupChurchMember>>,
+          TError,
+          Awaited<ReturnType<typeof lookupChurchMember>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLookupChurchMember<TData = Awaited<ReturnType<typeof lookupChurchMember>>, TError = ErrorType<unknown>>(
+ params: LookupChurchMemberParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupChurchMember>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary 청년부 등록 조회
+ */
+
+export function useLookupChurchMember<TData = Awaited<ReturnType<typeof lookupChurchMember>>, TError = ErrorType<unknown>>(
+ params: LookupChurchMemberParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupChurchMember>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getLookupChurchMemberQueryOptions(params,options)
 
   const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

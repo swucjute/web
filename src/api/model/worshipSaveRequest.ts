@@ -10,11 +10,27 @@ import type { WorshipPraiseRequest } from './worshipPraiseRequest';
 import type { WorshipAnnouncementRequest } from './worshipAnnouncementRequest';
 
 export interface WorshipSaveRequest {
-  sermonTitle?: string;
+  /**
+   * @minLength 0
+   * @maxLength 150
+   */
+  sermonTitle: string;
   worshipAt?: string;
+  /**
+   * @minLength 0
+   * @maxLength 50
+   */
   preacherName?: string;
+  /**
+   * @minLength 0
+   * @maxLength 100
+   */
   verseReference?: string;
   verseText?: string;
+  /**
+   * @minLength 0
+   * @maxLength 500
+   */
   youtubeUrl?: string;
   status?: string;
   bulletins?: WorshipBulletinRequest[];
