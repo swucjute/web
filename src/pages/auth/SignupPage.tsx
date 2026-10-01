@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-
-// 등록된 청년부 회원 목업 데이터
-const REGISTERED_MEMBERS = [
-  { name: '김지원', birthDate: '19970623', phone: '010-****-4118', gender: '여', id: 'member-1' },
-  { name: '이회원', birthDate: '19990315', phone: '010-****-2290', gender: '남', id: 'member-2' },
-  { name: '박리더', birthDate: '19950801', phone: '010-****-5530', gender: '남', id: 'member-3' },
-  { name: '최관리', birthDate: '19930412', phone: '010-****-7710', gender: '남', id: 'member-4' },
-];
+import { useRegisterProfile, useLookupChurchMember } from '../../api/generated/member/member';
+import { MemberProfileRegisterRequestDepartment } from '../../api/model';
+import { ApiError } from '../../api/httpClient';
+import { useAuth } from '../../contexts/AuthContext';
 
 type ResultState =
   | { type: 'idle' }
@@ -17,37 +13,96 @@ type ResultState =
 
 export function SignupPage() {
   const navigate = useNavigate();
+  const { loginWithMember } = useAuth();
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [result, setResult] = useState<ResultState>({ type: 'idle' });
-  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const canSearch = name.trim().length > 0 && birthDate.trim().length === 8;
+  const formattedBirthDate = birthDate.length === 8
+    ? `${birthDate.slice(0, 4)}-${birthDate.slice(4, 6)}-${birthDate.slice(6, 8)}`
+    : '';
+  const canSearch = name.trim().length > 0
+    && birthDate.length === 8
+    && /^010-\d{4}-\d{4}$/.test(phoneNumber);
 
-  const handleSearch = () => {
+  const lookupQuery = useLookupChurchMember(
+    { name: name.trim(), birthDate: formattedBirthDate, phoneNumber },
+    { query: { enabled: false, retry: false } },
+  );
+  const registerMutation = useRegisterProfile();
+
+  const handleSearch = async () => {
     if (!canSearch) return;
-    setIsLoading(true);
-    setTimeout(() => {
-      const found = REGISTERED_MEMBERS.find(
-        (m) => m.name === name.trim() && m.birthDate === birthDate.trim()
-      );
-      if (found) {
-        setResult({ type: 'found', name: found.name, birthDate: found.birthDate, phone: found.phone, gender: found.gender });
+    setErrorMessage('');
+    const response = await lookupQuery.refetch();
+    const member = response.data?.data;
+
+    if (response.isError || !member?.name || !member.birthDate || !member.phoneNumber || !member.gender) {
+      if (response.error instanceof ApiError && response.error.status !== 404) {
+        setErrorMessage('교적부 조회 중 오류가 발생했습니다.');
+      }
+      if (response.error instanceof ApiError && response.error.status === 401) {
+        navigate('/login', { replace: true });
       } else {
         setResult({ type: 'notfound' });
       }
-      setIsLoading(false);
-    }, 600);
+      return;
+    }
+
+    setResult({
+      type: 'found',
+      name: member.name,
+      birthDate: member.birthDate,
+      phone: member.phoneNumber,
+      gender: member.gender === 'FEMALE' ? '여' : '남',
+    });
   };
 
   const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 8);
     setBirthDate(val);
+    setResult({ type: 'idle' });
   };
 
-  const handleConfirm = () => {
-    // 실제 회원가입 연동 미구현 — 로그인 페이지로 임시 이동
-    navigate('/login');
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+    const formatted = digits.length <= 3
+      ? digits
+      : digits.length <= 7
+        ? `${digits.slice(0, 3)}-${digits.slice(3)}`
+        : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    setPhoneNumber(formatted);
+    setResult({ type: 'idle' });
+  };
+
+  const handleConfirm = async () => {
+    const member = lookupQuery.data?.data;
+    if (!member?.gender || !member.name || !member.birthDate || !member.phoneNumber) return;
+
+    setErrorMessage('');
+    try {
+      const response = await registerMutation.mutateAsync({
+        data: {
+          name: member.name,
+          gender: member.gender,
+          birthDate: member.birthDate,
+          phoneNumber: member.phoneNumber,
+          department: MemberProfileRegisterRequestDepartment.YOUTH,
+        },
+      });
+      if (!response.data) throw new Error('회원 정보가 없습니다.');
+
+      loginWithMember(response.data);
+      navigate(response.data.status === 'ACTIVE' ? '/' : '/pending-approval', { replace: true });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setErrorMessage('이미 등록되었거나 다른 계정에 연결된 교적 정보입니다.');
+      } else {
+        setErrorMessage('프로필 등록 중 오류가 발생했습니다.');
+      }
+    }
   };
 
   return (
@@ -98,19 +153,34 @@ export function SignupPage() {
             />
           </div>
 
+          <div className="mb-4">
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={phoneNumber}
+              onChange={handlePhoneNumberChange}
+              placeholder="휴대폰 번호 (010-0000-0000)"
+              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            />
+          </div>
+
           {/* 조회하기 버튼 */}
           <button
             type="button"
             onClick={handleSearch}
-            disabled={!canSearch || isLoading}
+            disabled={!canSearch || lookupQuery.isFetching}
             className={`w-full py-4 rounded-2xl text-base font-bold transition ${
-              canSearch && !isLoading
+              canSearch && !lookupQuery.isFetching
                 ? 'bg-blue-600 text-white active:bg-blue-700'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {isLoading ? '조회 중...' : '조회하기'}
+            {lookupQuery.isFetching ? '조회 중...' : '조회하기'}
           </button>
+
+          {errorMessage && (
+            <p className="mt-3 text-sm text-center text-red-500">{errorMessage}</p>
+          )}
 
           {/* 결과 영역 */}
           <div className="mt-6">
@@ -138,10 +208,11 @@ export function SignupPage() {
                 <button
                   type="button"
                   onClick={handleConfirm}
+                  disabled={registerMutation.isPending}
                   className="w-full py-4 rounded-2xl bg-blue-600 text-white text-base font-bold active:bg-blue-700 transition flex items-center justify-center gap-2"
                 >
                   <CheckCircle2 size={18} />
-                  본인이 맞습니다.
+                  {registerMutation.isPending ? '등록 중...' : '본인이 맞습니다.'}
                 </button>
 
                 <p className="text-xs text-center text-gray-400 leading-relaxed">
@@ -174,45 +245,6 @@ export function SignupPage() {
             )}
           </div>
 
-          {/* 개발 편의 임시 버튼 */}
-          <div className="mt-10 mb-6 border-t border-dashed border-gray-200 pt-4">
-            <p className="text-[10px] text-gray-300 text-center mb-2">[ 테스트용 임시 버튼 ]</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setName('김지원');
-                  setBirthDate('19970623');
-                  setResult({ type: 'found', name: '김지원', birthDate: '19970623', phone: '010-****-4118', gender: '여' });
-                }}
-                className="flex-1 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-medium border border-blue-200"
-              >
-                조회결과 (정상)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setName('홍길동');
-                  setBirthDate('20000101');
-                  setResult({ type: 'notfound' });
-                }}
-                className="flex-1 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-medium border border-red-200"
-              >
-                조회결과 (없음)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setName('');
-                  setBirthDate('');
-                  setResult({ type: 'idle' });
-                }}
-                className="flex-1 py-2 rounded-xl bg-gray-50 text-gray-500 text-xs font-medium border border-gray-200"
-              >
-                초기화
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

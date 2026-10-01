@@ -2,21 +2,22 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, UserRole } from '../types';
 import { membersApi } from '../utils/api';
 import { useCrudQuery } from '../hooks/useCrudQuery';
-import { clearTokens, logoutRequest, type MemberMeResponse, type MemberRole } from '../utils/authClient';
+import { clearTokens, logoutRequest } from '../utils/authClient';
+import type { MemberMeResponse, MemberMeResponseRole } from '../api/model';
 
-const MEMBER_ROLE_MAP: Record<MemberRole, UserRole> = {
+const MEMBER_ROLE_MAP: Record<MemberMeResponseRole, UserRole> = {
   ADMIN: 'admin',
-  MANAGER: 'admin',
+  EXECUTIVE: 'leader',
   LEADER: 'leader',
   USER: 'member',
 };
 
 function memberToUser(member: MemberMeResponse): User {
   return {
-    id: String(member.memberId),
+    id: String(member.memberId ?? ''),
     name: member.profile?.name ?? '',
     email: member.email ?? '',
-    role: MEMBER_ROLE_MAP[member.role],
+    role: member.role ? MEMBER_ROLE_MAP[member.role] : 'member',
     phone: member.profile?.phoneNumber ?? '',
     birthDate: member.profile?.birthDate ?? '',
     joinDate: '',

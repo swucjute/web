@@ -1,14 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { getMyProfile, useUpdateMyProfile } from '../../api/generated/member/member';
+import type { MemberUpdateRequestBankName } from '../../api/model';
 import {
   ArrowLeft, User, Phone, Cake, Building2, Briefcase,
   Mail, Shield, Landmark, CreditCard, Check, Lock, ChevronDown,
 } from 'lucide-react';
 
-const BANKS = [
-  '국민', '우리', '신한', '하나', '우체국',
-  '기업', '농협', '외환', '제일', '씨티',
+const BANKS: { value: MemberUpdateRequestBankName; label: string }[] = [
+  { value: 'KB', label: '국민' },
+  { value: 'WOORI', label: '우리' },
+  { value: 'SHINHAN', label: '신한' },
+  { value: 'HANA', label: '하나' },
+  { value: 'POST', label: '우체국' },
+  { value: 'IBK', label: '기업' },
+  { value: 'NH', label: '농협' },
+  { value: 'SC', label: 'SC제일' },
+  { value: 'KAKAO', label: '카카오뱅크' },
+  { value: 'TOSS', label: '토스뱅크' },
 ];
 
 const roleLabel = (role: string) =>
@@ -51,8 +61,9 @@ const inputNormal = `${inputBase} border-gray-200 text-gray-800 bg-white`;
 const inputDisabled = `${inputBase} border-gray-100 text-gray-400 bg-gray-50 cursor-not-allowed`;
 
 export function MyProfilePage() {
-  const { currentUser, updateUser, isAdmin } = useAuth();
+  const { currentUser, loginWithMember } = useAuth();
   const navigate = useNavigate();
+  const updateProfileMutation = useUpdateMyProfile();
 
   const [form, setForm] = useState({
     name: currentUser?.name ?? '',
@@ -66,17 +77,28 @@ export function MyProfilePage() {
 
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const selectedBankLabel = BANKS.find((bank) => bank.value === form.bank)?.label;
 
-  const canEditOrgFields = isAdmin();
-
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!currentUser) return;
-    updateUser(currentUser.id, form);
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      navigate('/more');
-    }, 900);
+    setErrorMessage('');
+    try {
+      await updateProfileMutation.mutateAsync({
+        data: {
+          birthDate: form.birthDate || undefined,
+          phoneNumber: form.phone || undefined,
+          bankName: form.bank ? form.bank as MemberUpdateRequestBankName : undefined,
+          accountNumber: form.accountNumber || undefined,
+        },
+      });
+      const response = await getMyProfile();
+      if (response.data) loginWithMember(response.data);
+      setSaved(true);
+      setTimeout(() => navigate('/more'), 900);
+    } catch {
+      setErrorMessage('내 정보를 저장하지 못했습니다. 입력값을 확인해주세요.');
+    }
   };
 
   if (!currentUser) return null;
@@ -92,12 +114,13 @@ export function MyProfilePage() {
           <span className="font-bold text-gray-900 text-base flex-1">내 정보 수정</span>
           <button
             onClick={handleSave}
+            disabled={updateProfileMutation.isPending}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
               saved ? 'bg-green-100 text-green-600' : 'bg-blue-600 text-white active:bg-blue-700'
             }`}
           >
             <Check size={13} />
-            {saved ? '저장됨' : '저장'}
+            {updateProfileMutation.isPending ? '저장 중' : saved ? '저장됨' : '저장'}
           </button>
         </div>
       </div>
@@ -141,8 +164,8 @@ export function MyProfilePage() {
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">기본 정보</p>
             <div className="bg-white rounded-2xl p-4 space-y-4 shadow-sm">
-              <Field label="이름" icon={<User size={12} />}>
-                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputNormal} />
+              <Field label="이름" icon={<User size={12} />} locked>
+                <input type="text" value={form.name} disabled className={inputDisabled} />
               </Field>
               <Field label="전화번호" icon={<Phone size={12} />}>
                 <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="010-0000-0000" className={inputNormal} />
@@ -157,11 +180,11 @@ export function MyProfilePage() {
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">소속 정보</p>
             <div className="bg-white rounded-2xl p-4 space-y-4 shadow-sm">
-              <Field label="소속" icon={<Building2 size={12} />} locked={!canEditOrgFields}>
-                <input type="text" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} disabled={!canEditOrgFields} placeholder="청년부" className={canEditOrgFields ? inputNormal : inputDisabled} />
+              <Field label="소속" icon={<Building2 size={12} />} locked>
+                <input type="text" value={form.department} disabled placeholder="청년부" className={inputDisabled} />
               </Field>
-              <Field label="직분" icon={<Briefcase size={12} />} locked={!canEditOrgFields}>
-                <input type="text" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} disabled={!canEditOrgFields} placeholder="예) 소그룹 리더, 찬양팀" className={canEditOrgFields ? inputNormal : inputDisabled} />
+              <Field label="직분" icon={<Briefcase size={12} />} locked>
+                <input type="text" value={form.position} disabled placeholder="예) 소그룹 리더, 찬양팀" className={inputDisabled} />
               </Field>
             </div>
           </div>
@@ -173,7 +196,7 @@ export function MyProfilePage() {
               <Field label="은행" icon={<Landmark size={12} />}>
                 <div className="relative">
                   <button type="button" onClick={() => setShowBankDropdown(!showBankDropdown)} className={`${inputNormal} flex items-center justify-between text-left ${!form.bank ? 'text-gray-400' : 'text-gray-800'}`}>
-                    <span>{form.bank || '은행 선택'}</span>
+                    <span>{selectedBankLabel || '은행 선택'}</span>
                     <ChevronDown size={16} className={`text-gray-400 transition-transform ${showBankDropdown ? 'rotate-180' : ''}`} />
                   </button>
                   {showBankDropdown && (
@@ -183,8 +206,8 @@ export function MyProfilePage() {
                         <div className="grid grid-cols-2 gap-0 divide-y divide-gray-50">
                           <button type="button" onClick={() => { setForm({ ...form, bank: '' }); setShowBankDropdown(false); }} className="col-span-2 px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-50 text-left border-b border-gray-100">선택 안함</button>
                           {BANKS.map((bank) => (
-                            <button key={bank} type="button" onClick={() => { setForm({ ...form, bank }); setShowBankDropdown(false); }} className={`px-4 py-3 text-sm text-left transition-colors ${form.bank === bank ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}>
-                              {form.bank === bank && <span className="mr-1">✓</span>}{bank}은행
+                            <button key={bank.value} type="button" onClick={() => { setForm({ ...form, bank: bank.value }); setShowBankDropdown(false); }} className={`px-4 py-3 text-sm text-left transition-colors ${form.bank === bank.value ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}>
+                              {form.bank === bank.value && <span className="mr-1">✓</span>}{bank.label}
                             </button>
                           ))}
                         </div>
@@ -199,7 +222,7 @@ export function MyProfilePage() {
               {(form.bank || form.accountNumber) && (
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
                   <p className="text-[10px] font-medium opacity-75 mb-1">등록 계좌</p>
-                  <p className="text-sm font-bold">{form.bank ? `${form.bank}은행` : '은행 미선택'}{' '}<span className="font-normal opacity-90">{form.accountNumber || '계좌번호 미입력'}</span></p>
+                  <p className="text-sm font-bold">{selectedBankLabel || '은행 미선택'}{' '}<span className="font-normal opacity-90">{form.accountNumber || '계좌번호 미입력'}</span></p>
                   <p className="text-[11px] opacity-75 mt-1">{currentUser.name}</p>
                 </div>
               )}
@@ -207,10 +230,12 @@ export function MyProfilePage() {
           </div>
 
           {/* 저장 버튼 */}
-          <button onClick={handleSave} className={`w-full rounded-2xl py-4 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${saved ? 'bg-green-500 text-white' : 'bg-blue-600 text-white active:bg-blue-700'}`}>
+          <button onClick={handleSave} disabled={updateProfileMutation.isPending} className={`w-full rounded-2xl py-4 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${saved ? 'bg-green-500 text-white' : 'bg-blue-600 text-white active:bg-blue-700'}`}>
             <Check size={16} />
-            {saved ? '저장되었습니다!' : '저장하기'}
+            {updateProfileMutation.isPending ? '저장 중...' : saved ? '저장되었습니다!' : '저장하기'}
           </button>
+
+          {errorMessage && <p className="text-sm text-center text-red-500">{errorMessage}</p>}
 
           <div className="h-2" />
         </div>
