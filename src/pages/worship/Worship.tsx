@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
@@ -6,12 +6,14 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import {
-  Plus, Church, Users, X, Trash2, ChevronRight, ChevronLeft,
-  Image, Music, Megaphone, BookOpen, UserCheck, Play, Calendar,
+  Plus, Church, X, Trash2, ChevronRight, ChevronLeft,
+  Image, Music, Megaphone, BookOpen, Play,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { Worship as WorshipType, WorshipPraise } from '../../types';
+import { getWorship } from '../../api/generated/worship/worship';
+import { worshipDetailToView } from '../../api/worshipAdapter';
 
 type AnnouncementDraft = { id: string; title: string; description: string; surveyId: string };
 
@@ -69,7 +71,6 @@ interface WorshipFormProps {
   setFormData: React.Dispatch<React.SetStateAction<FormState>>;
   inlinePraises: WorshipPraise[];
   setInlinePraises: React.Dispatch<React.SetStateAction<WorshipPraise[]>>;
-  linkedPraises: { id: string; title: string; artist: string; youtubeUrl?: string }[];
   bulletinImages: string[];
   setBulletinImages: React.Dispatch<React.SetStateAction<string[]>>;
   announcements: AnnouncementDraft[];
@@ -78,32 +79,19 @@ interface WorshipFormProps {
   onCancel: () => void;
   onDelete?: () => void;
   submitLabel: string;
-  surveys: { id: string; title: string; isActive: boolean }[];
 }
 
 function WorshipForm({
-  sheetTitle, formData, setFormData, inlinePraises, setInlinePraises, linkedPraises,
+  sheetTitle, formData, setFormData, inlinePraises, setInlinePraises,
   bulletinImages, setBulletinImages, announcements, setAnnouncements,
-  onSubmit, onCancel, onDelete, submitLabel, surveys,
+  onSubmit, onCancel, onDelete, submitLabel,
 }: WorshipFormProps) {
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const [praiseInput, setPraiseInput] = useState({ title: '', artist: '', youtubeUrl: '' });
   const [announcementInput, setAnnouncementInput] = useState({ title: '', description: '', surveyId: '' });
+  const [bulletinUrl, setBulletinUrl] = useState('');
 
   const fd = (field: keyof FormState, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setBulletinImages((prev) => [...prev, ev.target!.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-    e.target.value = '';
-  };
 
   const addInlinePraise = () => {
     if (!praiseInput.title.trim()) return;
@@ -134,15 +122,9 @@ function WorshipForm({
             {/* 기본 정보 */}
             <section className="space-y-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">기본 정보</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-sm">날짜 *</Label>
-                  <Input type="date" value={formData.date} onChange={(e) => fd('date', e.target.value)} required className="rounded-xl" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-sm">예배명 *</Label>
-                  <Input value={formData.title} onChange={(e) => fd('title', e.target.value)} placeholder="주일 2부 예배" required className="rounded-xl" />
-                </div>
+              <div className="space-y-1">
+                <Label className="text-sm">날짜 *</Label>
+                <Input type="date" value={formData.date} onChange={(e) => fd('date', e.target.value)} required className="rounded-xl" />
               </div>
             </section>
 
@@ -175,67 +157,11 @@ function WorshipForm({
               </div>
             </section>
 
-            {/* 예배 정보 */}
-            <section className="space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">예배 정보</p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-sm">인도자 *</Label>
-                  <Input value={formData.worshipLeader} onChange={(e) => fd('worshipLeader', e.target.value)} required className="rounded-xl" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-sm">출석 인원</Label>
-                  <Input type="number" value={formData.attendance} onChange={(e) => fd('attendance', e.target.value)} className="rounded-xl" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-sm">헌금 (원)</Label>
-                  <Input type="number" value={formData.offerings} onChange={(e) => fd('offerings', e.target.value)} className="rounded-xl" />
-                </div>
-              </div>
-            </section>
-
-            {/* 집례진 */}
-            <section className="space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                <UserCheck size={12} /> 집례진
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-sm">대표기도</Label>
-                  <Input value={formData.committeeRepPrayer} onChange={(e) => fd('committeeRepPrayer', e.target.value)} className="rounded-xl" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-sm">말씀봉독</Label>
-                  <Input value={formData.committeeBibleReading} onChange={(e) => fd('committeeBibleReading', e.target.value)} className="rounded-xl" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-sm">봉헌위원</Label>
-                  <Input value={formData.committeeOffering} onChange={(e) => fd('committeeOffering', e.target.value)} className="rounded-xl" />
-                </div>
-              </div>
-            </section>
-
             {/* 찬양 */}
             <section className="space-y-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Music size={12} /> 찬양 목록
               </p>
-
-              {/* 찬양 관리(worshipId 연동)에서 등록된 곡 — 읽기 전용 */}
-              {linkedPraises.length > 0 && (
-                <div className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm space-y-1.5">
-                  <p className="text-[11px] text-gray-400 flex items-center gap-1 mb-1">
-                    <Calendar size={10} /> 찬양 관리 연동
-                  </p>
-                  {linkedPraises.map((song, idx) => (
-                    <div key={song.id} className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 w-4 shrink-0">{idx + 1}.</span>
-                      <span className="text-sm text-gray-700 font-medium truncate flex-1">{song.title}</span>
-                      {song.youtubeUrl && <Play size={12} className="text-red-400 shrink-0" />}
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {inlinePraises.length > 0 && (
                 <div className="space-y-2">
@@ -285,11 +211,12 @@ function WorshipForm({
                   ))}
                 </div>
               )}
-              <input ref={imageInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
-              <button type="button" onClick={() => imageInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 active:bg-gray-50 transition">
-                <Image size={16} />
-                이미지 추가
-              </button>
+              <div className="flex gap-2">
+                <Input value={bulletinUrl} onChange={(e) => setBulletinUrl(e.target.value)} placeholder="주보 이미지 URL" className="rounded-xl text-sm flex-1" />
+                <button type="button" onClick={() => { if (bulletinUrl.trim()) { setBulletinImages((prev) => [...prev, bulletinUrl.trim()]); setBulletinUrl(''); } }} className="px-3 bg-blue-600 text-white rounded-xl text-sm font-medium">
+                  추가
+                </button>
+              </div>
             </section>
 
             {/* 광고 */}
@@ -300,16 +227,12 @@ function WorshipForm({
               {announcements.length > 0 && (
                 <div className="space-y-2">
                   {announcements.map((ann, i) => {
-                    const linkedSurvey = ann.surveyId ? surveys.find((s) => s.id === ann.surveyId) : null;
                     return (
                       <div key={ann.id} className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
                         <span className="text-xs text-gray-400 w-4 shrink-0 mt-0.5">{i + 1}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800">{ann.title}</p>
                           {ann.description && <p className="text-xs text-gray-400 mt-0.5">{ann.description}</p>}
-                          {linkedSurvey && (
-                            <p className="text-xs text-blue-500 mt-0.5">설문 연결됨: {linkedSurvey.title}</p>
-                          )}
                         </div>
                         <button type="button" onClick={() => setAnnouncements((prev) => prev.filter((x) => x.id !== ann.id))} className="text-gray-300 active:text-red-400 transition shrink-0 mt-0.5">
                           <X size={14} />
@@ -327,25 +250,7 @@ function WorshipForm({
                     추가
                   </button>
                 </div>
-                {surveys.length > 0 && (
-                  <select
-                    value={announcementInput.surveyId}
-                    onChange={(e) => setAnnouncementInput({ ...announcementInput, surveyId: e.target.value })}
-                    className="w-full text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-1.5"
-                  >
-                    <option value="">설문 연결 (선택사항)</option>
-                    {surveys.filter((s) => s.isActive).map((s) => (
-                      <option key={s.id} value={s.id}>{s.title}</option>
-                    ))}
-                  </select>
-                )}
               </div>
-            </section>
-
-            {/* 비고 */}
-            <section className="space-y-1">
-              <Label className="text-sm">비고</Label>
-              <Textarea value={formData.notes} onChange={(e) => fd('notes', e.target.value)} rows={2} className="rounded-xl" />
             </section>
 
             {/* 삭제 버튼 (수정 모드) */}
@@ -375,7 +280,7 @@ function WorshipForm({
 export function Worship() {
   const navigate = useNavigate();
   const { isLeader } = useAuth();
-  const { worships, addWorship, updateWorship, deleteWorship, praises, surveys } = useData();
+  const { worships, addWorship, updateWorship, deleteWorship } = useData();
 
   // 추가 폼
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -429,15 +334,16 @@ export function Worship() {
     inlinePraises,
   });
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    addWorship(buildPayload(addForm, addInlinePraises, addBulletinImages, addAnns));
+    await addWorship(buildPayload(addForm, addInlinePraises, addBulletinImages, addAnns));
     resetAddState();
   };
 
-  const openEdit = (id: string) => {
-    const w = worships.find((x) => x.id === id);
-    if (!w) return;
+  const openEdit = async (id: string) => {
+    const response = await getWorship(Number(id));
+    if (!response.data) return;
+    const w = worshipDetailToView(response.data);
     setEditForm(worshipToForm(w));
     setEditInlinePraises(w.inlinePraises ?? []);
     setEditBulletinImages(w.bulletinImages ?? []);
@@ -445,16 +351,16 @@ export function Worship() {
     setEditingId(id);
   };
 
-  const handleEdit = (e: React.FormEvent) => {
+  const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingId) return;
-    updateWorship(editingId, buildPayload(editForm, editInlinePraises, editBulletinImages, editAnns));
+    await updateWorship(editingId, buildPayload(editForm, editInlinePraises, editBulletinImages, editAnns));
     setEditingId(null);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
-      deleteWorship(id);
+      await deleteWorship(id);
       setEditingId(null);
     }
   };
@@ -518,10 +424,6 @@ export function Worship() {
                     <p className="text-xs text-gray-500">{worship.preacher} 목사</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Users size={11} />
-                      <span>{worship.attendance}명</span>
-                    </div>
                     {canEdit && <ChevronRight size={16} className="text-gray-300" />}
                   </div>
                 </div>
@@ -539,7 +441,6 @@ export function Worship() {
           setFormData={setAddForm}
           inlinePraises={addInlinePraises}
           setInlinePraises={setAddInlinePraises}
-          linkedPraises={[]}
           bulletinImages={addBulletinImages}
           setBulletinImages={setAddBulletinImages}
           announcements={addAnns}
@@ -547,7 +448,6 @@ export function Worship() {
           onSubmit={handleAdd}
           onCancel={resetAddState}
           submitLabel="추가"
-          surveys={surveys}
         />
       )}
 
@@ -559,7 +459,6 @@ export function Worship() {
           setFormData={setEditForm}
           inlinePraises={editInlinePraises}
           setInlinePraises={setEditInlinePraises}
-          linkedPraises={praises.filter((p) => p.worshipId === editingId)}
           bulletinImages={editBulletinImages}
           setBulletinImages={setEditBulletinImages}
           announcements={editAnns}
@@ -568,7 +467,6 @@ export function Worship() {
           onCancel={() => setEditingId(null)}
           onDelete={() => handleDelete(editingId)}
           submitLabel="저장"
-          surveys={surveys}
         />
       )}
     </div>

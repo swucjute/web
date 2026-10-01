@@ -6,21 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export interface WorshipPraiseRequest {
+export interface PraiseInfo {
+  id?: number;
   sortOrder?: number;
-  /**
-   * @minLength 0
-   * @maxLength 200
-   */
-  title: string;
-  /**
-   * @minLength 0
-   * @maxLength 200
-   */
+  title?: string;
   artist?: string;
-  /**
-   * @minLength 0
-   * @maxLength 50
-   */
   youtubeVideoId?: string;
 }

@@ -5,11 +5,13 @@
  * 주뜨 청년부 앱 REST API 명세
  * OpenAPI spec version: v1
  */
+import type { MemberUpdateRequestBankName } from './memberUpdateRequestBankName';
 
 export interface MemberUpdateRequest {
   birthDate?: string;
+  /** @pattern ^010-\d{4}-\d{4}$ */
   phoneNumber?: string;
   profileImageUrl?: string;
-  bankName?: string;
+  bankName?: MemberUpdateRequestBankName;
   accountNumber?: string;
 }

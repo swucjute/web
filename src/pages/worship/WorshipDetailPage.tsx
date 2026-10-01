@@ -1,29 +1,11 @@
 import { useParams, useNavigate } from 'react-router';
-import { useData } from '../../contexts/DataContext';
-import { ChevronLeft, Church } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { WorshipDetailContent } from '../../components/WorshipDetailContent';
 
 export function WorshipDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { worships } = useData();
-
-  const worship = worships.find((w) => w.id === id);
-
-  if (!worship) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
-        <Church size={40} className="text-gray-200 mb-3" />
-        <p className="text-sm text-gray-400">예배 정보를 찾을 수 없습니다</p>
-        <button
-          onClick={() => navigate('/worship')}
-          className="mt-4 text-blue-500 text-sm font-medium"
-        >
-          예배 탭으로 돌아가기
-        </button>
-      </div>
-    );
-  }
+  if (!id) return null;
 
   return (
     <div className="flex flex-col min-h-full bg-gray-50">
@@ -40,7 +22,7 @@ export function WorshipDetailPage() {
       </div>
 
       <div className="px-4 py-4 pb-8">
-        <WorshipDetailContent worshipId={worship.id} />
+        <WorshipDetailContent worshipId={id} />
       </div>
     </div>
   );

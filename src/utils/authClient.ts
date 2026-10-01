@@ -1,5 +1,7 @@
 // 실제 Spring Boot 백엔드 인증 API 클라이언트 (카카오 로그인 / JWT)
 
+import type { MemberMeResponse } from '../api/model/memberMeResponse'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 const ACCESS_TOKEN_KEY = 'accessToken'
@@ -16,31 +18,6 @@ export interface AuthTokens {
   refreshToken: string
   tokenType: string
   expiresIn: number
-}
-
-export type MemberRole = 'USER' | 'LEADER' | 'MANAGER' | 'ADMIN'
-export type MemberStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'WITHDRAWN' | 'BLOCKED'
-
-export interface MemberProfileInfo {
-  name: string
-  gender: 'MALE' | 'FEMALE'
-  birthDate: string
-  phoneNumber: string
-  profileImageUrl?: string | null
-  department?: string | null
-  position?: string | null
-  bankName?: string | null
-  accountNumber?: string | null
-}
-
-export interface MemberMeResponse {
-  memberId: number
-  email: string | null
-  role: MemberRole
-  status: MemberStatus
-  lastLoginAt: string | null
-  profileCompleted: boolean
-  profile: MemberProfileInfo | null
 }
 
 export function getAccessToken(): string | null {

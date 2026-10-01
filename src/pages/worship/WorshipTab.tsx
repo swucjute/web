@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
-import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Church, Sparkles, ChevronLeft } from 'lucide-react';
 import { WorshipDetailContent } from '../../components/WorshipDetailContent';
+import { useGetCurrent } from '../../api/generated/worship/worship';
+import { worshipDetailToView } from '../../api/worshipAdapter';
 
 export function WorshipTab() {
   const { worships } = useData();
+  const { data: currentResponse } = useGetCurrent({ query: { retry: false } });
   const [activeTab, setActiveTab] = useState<'thisWeek' | 'archive'>('thisWeek');
   const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(null);
 
@@ -14,18 +17,9 @@ export function WorshipTab() {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 0 });
-  const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
-
-  const thisWeekWorship =
-    sorted.find((w) => {
-      try {
-        return isWithinInterval(parseISO(w.date), { start: weekStart, end: weekEnd });
-      } catch {
-        return false;
-      }
-    }) ?? sorted[0] ?? null;
+  const thisWeekWorship = currentResponse?.data
+    ? worshipDetailToView(currentResponse.data)
+    : null;
 
   const pastWorships = sorted.filter((w) => w.id !== thisWeekWorship?.id);
 

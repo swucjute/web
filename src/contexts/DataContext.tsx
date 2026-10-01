@@ -1,7 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { FinanceRecord, CommunityPost, Event, Worship, Praise, Survey, Prayer } from '../types';
-import { eventsApi, surveysApi, worshipsApi, praisesApi } from '../utils/api';
+import { eventsApi, surveysApi, praisesApi } from '../utils/api';
 import { useCrudQuery } from '../hooks/useCrudQuery';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  getGetWorshipsQueryKey,
+  useCreate as useCreateWorship,
+  useDelete as useDeleteWorship,
+  useGetWorships,
+  useUpdate as useUpdateWorship,
+} from '../api/generated/worship/worship';
+import { worshipListItemToView, worshipViewToRequest } from '../api/worshipAdapter';
 
 const SEED_POSTS: CommunityPost[] = [
   {
@@ -160,6 +169,7 @@ function readLocal<T>(key: string, fallback?: T[]): T[] {
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   // 서버 없는 로컬 전용 데이터 (finances/posts/prayers)
   // 지연 초기화로 읽어와 localStorage 복구 시 race condition 방지
   const [finances, setFinances] = useState<FinanceRecord[]>(() => readLocal('finances'));
@@ -178,11 +188,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   } = useCrudQuery<Event>('events', async () => (await eventsApi.getAll()) as Event[]);
 
   // ── Worship (mock API) ─────────────────────────────────
-  const {
-    data: worships,
-    isLoading: worshipsLoading,
-    optimisticMutate: mutateWorships,
-  } = useCrudQuery<Worship>('worships', async () => (await worshipsApi.getAll()) as Worship[]);
+  const worshipParams = { page: 0, size: 100 };
+  const { data: worshipResponse, isLoading: worshipsLoading } = useGetWorships(worshipParams);
+  const createWorshipMutation = useCreateWorship();
+  const updateWorshipMutation = useUpdateWorship();
+  const deleteWorshipMutation = useDeleteWorship();
+  const worships = useMemo(
+    () => worshipResponse?.data?.content?.map(worshipListItemToView) ?? [],
+    [worshipResponse],
+  );
+
+  const refreshWorships = () => queryClient.invalidateQueries({
+    queryKey: getGetWorshipsQueryKey(worshipParams),
+  });
 
   // ── Praise (mock API) ──────────────────────────────────
   const {
@@ -270,23 +288,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // ── Worship ────────────────────────────────────────────
   const addWorship = async (worship: Omit<Worship, 'id'>) => {
-    const newWorship: Worship = { ...worship, id: Date.now().toString() };
-    await mutateWorships(
-      (prev) => [newWorship, ...prev],
-      () => worshipsApi.add(newWorship),
-    );
+    await createWorshipMutation.mutateAsync({ data: worshipViewToRequest(worship) });
+    await refreshWorships();
   };
   const updateWorship = async (id: string, worship: Partial<Worship>) => {
-    await mutateWorships(
-      (prev) => prev.map((w) => (w.id === id ? { ...w, ...worship } : w)),
-      () => worshipsApi.update(id, worship),
-    );
+    const current = worships.find((item) => item.id === id);
+    if (!current) throw new Error('예배 정보를 찾을 수 없습니다.');
+    await updateWorshipMutation.mutateAsync({
+      worshipId: Number(id),
+      data: worshipViewToRequest({ ...current, ...worship }),
+    });
+    await refreshWorships();
   };
   const deleteWorship = async (id: string) => {
-    await mutateWorships(
-      (prev) => prev.filter((w) => w.id !== id),
-      () => worshipsApi.remove(id),
-    );
+    await deleteWorshipMutation.mutateAsync({ worshipId: Number(id) });
+    await refreshWorships();
   };
 
   // ── Praise ─────────────────────────────────────────────

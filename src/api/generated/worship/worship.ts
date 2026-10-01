@@ -25,7 +25,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ApiResponseObject,
+  ApiResponsePageResponseWorshipListItemResponse,
+  ApiResponseVoid,
+  ApiResponseWorshipDetailResponse,
   GetWorshipsParams,
   WorshipSaveRequest
 } from '../../model';
@@ -49,9 +51,9 @@ export const getGetWorshipUrl = (worshipId: number,) => {
   return `/api/v1/worships/${worshipId}`
 }
 
-export const getWorship = async (worshipId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const getWorship = async (worshipId: number, options?: RequestInit): Promise<ApiResponseWorshipDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetWorshipUrl(worshipId),
+  return apiClient<ApiResponseWorshipDetailResponse>(getGetWorshipUrl(worshipId),
   {      
     ...options,
     method: 'GET'
@@ -145,9 +147,9 @@ export const getUpdateUrl = (worshipId: number,) => {
 }
 
 export const update = async (worshipId: number,
-    worshipSaveRequest: WorshipSaveRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+    worshipSaveRequest: WorshipSaveRequest, options?: RequestInit): Promise<ApiResponseWorshipDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getUpdateUrl(worshipId),
+  return apiClient<ApiResponseWorshipDetailResponse>(getUpdateUrl(worshipId),
   {      
     ...options,
     method: 'PUT',
@@ -216,9 +218,9 @@ export const getDeleteUrl = (worshipId: number,) => {
   return `/api/v1/worships/${worshipId}`
 }
 
-export const _delete = async (worshipId: number, options?: RequestInit): Promise<ApiResponseObject> => {
+export const _delete = async (worshipId: number, options?: RequestInit): Promise<ApiResponseVoid> => {
   
-  return apiClient<ApiResponseObject>(getDeleteUrl(worshipId),
+  return apiClient<ApiResponseVoid>(getDeleteUrl(worshipId),
   {      
     ...options,
     method: 'DELETE'
@@ -293,9 +295,9 @@ export const getGetWorshipsUrl = (params?: GetWorshipsParams,) => {
   return stringifiedParams.length > 0 ? `/api/v1/worships?${stringifiedParams}` : `/api/v1/worships`
 }
 
-export const getWorships = async (params?: GetWorshipsParams, options?: RequestInit): Promise<ApiResponseObject> => {
+export const getWorships = async (params?: GetWorshipsParams, options?: RequestInit): Promise<ApiResponsePageResponseWorshipListItemResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetWorshipsUrl(params),
+  return apiClient<ApiResponsePageResponseWorshipListItemResponse>(getGetWorshipsUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -388,9 +390,9 @@ export const getCreateUrl = () => {
   return `/api/v1/worships`
 }
 
-export const create = async (worshipSaveRequest: WorshipSaveRequest, options?: RequestInit): Promise<ApiResponseObject> => {
+export const create = async (worshipSaveRequest: WorshipSaveRequest, options?: RequestInit): Promise<ApiResponseWorshipDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getCreateUrl(),
+  return apiClient<ApiResponseWorshipDetailResponse>(getCreateUrl(),
   {      
     ...options,
     method: 'POST',
@@ -459,9 +461,9 @@ export const getGetCurrentUrl = () => {
   return `/api/v1/worships/current`
 }
 
-export const getCurrent = async ( options?: RequestInit): Promise<ApiResponseObject> => {
+export const getCurrent = async ( options?: RequestInit): Promise<ApiResponseWorshipDetailResponse> => {
   
-  return apiClient<ApiResponseObject>(getGetCurrentUrl(),
+  return apiClient<ApiResponseWorshipDetailResponse>(getGetCurrentUrl(),
   {      
     ...options,
     method: 'GET'

@@ -6,23 +6,14 @@
  * OpenAPI spec version: v1
  */
 
-export interface WorshipAnnouncementRequest {
+export interface AnnouncementInfo {
+  id?: number;
   sortOrder?: number;
-  /**
-   * @minLength 0
-   * @maxLength 200
-   */
-  title: string;
+  title?: string;
   content?: string;
-  /**
-   * @minLength 0
-   * @maxLength 500
-   */
   linkUrl?: string;
-  /**
-   * @minLength 0
-   * @maxLength 100
-   */
   linkLabel?: string;
   afterServiceEvent?: boolean;
+  displayStartDate?: string;
+  displayEndDate?: string;
 }

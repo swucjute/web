@@ -1,8 +1,19 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlatformDetail } from '../../hooks/usePlatformDetail';
 import { platformStatusBadges } from '../../utils/platformStatus';
+import {
+  getGetMyMembershipQueryKey,
+  getGetMembersQueryKey,
+  getGetPlatformQueryKey,
+  useGetMembers,
+  useGetMyMembership,
+  useJoin,
+  useLeave,
+  useUpdateMemberStatus,
+} from '../../api/generated/platform/platform';
 import {
   ArrowLeft, Users, Clock, FileText, Target, StickyNote,
   LayoutGrid, Pencil,
@@ -29,11 +40,27 @@ const sampleActivities = [
 export function PlatformDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { currentUser, isAdmin } = useAuth();
   const { data: platform, isLoading } = usePlatformDetail(id);
+  const platformId = Number(id);
+  const hasRealSession = currentUser?.authSource === 'kakao' && Number.isFinite(platformId);
+  const membershipQuery = useGetMyMembership(platformId, {
+    query: { enabled: hasRealSession, retry: false },
+  });
+  const canManageMemberships = hasRealSession
+    && (isAdmin() || currentUser?.id === String(platform?.ownerMemberId));
+  const memberParams = { page: 0, size: 100 };
+  const membersQuery = useGetMembers(platformId, memberParams, {
+    query: { enabled: canManageMemberships, retry: false },
+  });
+  const joinMutation = useJoin();
+  const leaveMutation = useLeave();
+  const updateMemberMutation = useUpdateMemberStatus();
 
   const [activeTab, setActiveTab] = useState<'info' | 'activity'>('info');
   const [activityView, setActivityView] = useState<'grid' | 'detail'>('grid');
+  const [membershipError, setMembershipError] = useState('');
 
   if (isLoading) {
     return (
@@ -60,6 +87,44 @@ export function PlatformDetailPage() {
     currentUser?.authSource === 'kakao' || currentUser?.department === '청년부';
   const isProposer = currentUser?.id === String(platform.ownerMemberId);
   const isRecruiting = platform.approvalStatus === 'APPROVED' && platform.recruiting;
+  const membership = membershipQuery.data?.data;
+  const membershipStatus = membership?.status;
+
+  const refreshMembership = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getGetMyMembershipQueryKey(platformId) }),
+      queryClient.invalidateQueries({ queryKey: getGetPlatformQueryKey(platformId) }),
+    ]);
+  };
+
+  const handleJoin = async () => {
+    setMembershipError('');
+    try {
+      await joinMutation.mutateAsync({ platformId });
+      await refreshMembership();
+    } catch {
+      setMembershipError('참여 신청을 처리하지 못했습니다.');
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!window.confirm('플랫폼에서 탈퇴하시겠습니까?')) return;
+    setMembershipError('');
+    try {
+      await leaveMutation.mutateAsync({ platformId });
+      await refreshMembership();
+    } catch {
+      setMembershipError('플랫폼 탈퇴를 처리하지 못했습니다.');
+    }
+  };
+
+  const handleMemberStatus = async (memberId: number, status: 'APPROVED' | 'REJECTED') => {
+    await updateMemberMutation.mutateAsync({ platformId, memberId, data: { status } });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getGetMembersQueryKey(platformId, memberParams) }),
+      queryClient.invalidateQueries({ queryKey: getGetPlatformQueryKey(platformId) }),
+    ]);
+  };
 
   return (
     <div className="flex flex-col min-h-full bg-gray-50">
@@ -183,10 +248,49 @@ export function PlatformDetailPage() {
                   )}
                 </div>
 
-                {/* 참여 신청 — 가입/승인 기능은 다음 단계에서 실제 API와 연동된다 */}
-                {isRecruiting && isYouthMember && (
-                  <div className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gray-100 text-gray-400 font-bold text-sm">
-                    <Clock size={16} />참여 신청 기능 준비 중
+                {hasRealSession && !isProposer && isYouthMember && (
+                  <div className="space-y-2">
+                    {membershipStatus === 'PENDING' && (
+                      <div className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-amber-50 text-amber-600 font-bold text-sm">
+                        <Clock size={16} />참여 승인 대기 중
+                      </div>
+                    )}
+                    {membershipStatus === 'APPROVED' && (
+                      <button onClick={handleLeave} disabled={leaveMutation.isPending} className="w-full py-3.5 rounded-2xl bg-red-50 text-red-500 font-bold text-sm">
+                        {leaveMutation.isPending ? '탈퇴 처리 중...' : '플랫폼 탈퇴'}
+                      </button>
+                    )}
+                    {isRecruiting && (!membershipStatus || membershipStatus === 'REJECTED' || membershipStatus === 'WITHDRAWN') && (
+                      <button onClick={handleJoin} disabled={joinMutation.isPending} className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm">
+                        {joinMutation.isPending ? '신청 중...' : '참여 신청'}
+                      </button>
+                    )}
+                    {membershipError && <p className="text-center text-xs text-red-500">{membershipError}</p>}
+                  </div>
+                )}
+
+                {canManageMemberships && membersQuery.data?.data?.content && (
+                  <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-gray-800">참여자 관리</h3>
+                      <span className="text-xs text-gray-400">{membersQuery.data.data.totalElements ?? 0}명</span>
+                    </div>
+                    {membersQuery.data.data.content.length === 0 ? (
+                      <p className="py-3 text-center text-xs text-gray-400">참여자가 없습니다.</p>
+                    ) : membersQuery.data.data.content.map((member) => (
+                      <div key={member.platformMemberId} className="flex items-center gap-3 border-t border-gray-50 pt-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800">{member.memberName || `회원 ${member.memberId}`}</p>
+                          <p className="text-xs text-gray-400">{member.status}</p>
+                        </div>
+                        {member.status === 'PENDING' && member.memberId && (
+                          <div className="flex gap-1.5">
+                            <button onClick={() => handleMemberStatus(member.memberId!, 'APPROVED')} className="px-2.5 py-1.5 rounded-lg bg-green-50 text-green-600 text-xs font-semibold">승인</button>
+                            <button onClick={() => handleMemberStatus(member.memberId!, 'REJECTED')} className="px-2.5 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-semibold">반려</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </>

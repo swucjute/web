@@ -2,21 +2,22 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, UserRole } from '../types';
 import { membersApi } from '../utils/api';
 import { useCrudQuery } from '../hooks/useCrudQuery';
-import { clearTokens, logoutRequest, type MemberMeResponse, type MemberRole } from '../utils/authClient';
+import { clearTokens, getMyProfile, logoutRequest } from '../utils/authClient';
+import type { MemberMeResponse, MemberMeResponseRole } from '../api/model';
 
-const MEMBER_ROLE_MAP: Record<MemberRole, UserRole> = {
+const MEMBER_ROLE_MAP: Record<MemberMeResponseRole, UserRole> = {
   ADMIN: 'admin',
-  MANAGER: 'admin',
+  EXECUTIVE: 'leader',
   LEADER: 'leader',
   USER: 'member',
 };
 
 function memberToUser(member: MemberMeResponse): User {
   return {
-    id: String(member.memberId),
+    id: String(member.memberId ?? ''),
     name: member.profile?.name ?? '',
     email: member.email ?? '',
-    role: MEMBER_ROLE_MAP[member.role],
+    role: member.role ? MEMBER_ROLE_MAP[member.role] : 'member',
     phone: member.profile?.phoneNumber ?? '',
     birthDate: member.profile?.birthDate ?? '',
     joinDate: '',
@@ -120,9 +121,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
+  // Restore the authoritative backend user for an existing real JWT session.
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token || token.startsWith('mock-token-')) return;
+
+    getMyProfile()
+      .then((member) => {
+        const user = memberToUser(member);
+        setCurrentUser(user);
+        localStorage.setItem('currentUser', JSON.stringify(user));
+      })
+      .catch(() => {
+        // fetchWithAuth handles one refresh attempt; the route guard handles an invalid session.
+      });
+  }, []);
+
   // Refresh currentUser from latest users data (keeps profile in sync)
   useEffect(() => {
-    if (currentUser && users.length > 0) {
+    // Kakao users come from the Spring Boot member API. Do not overwrite them
+    // with a mock/Supabase user that happens to have the same numeric id.
+    if (currentUser && currentUser.authSource !== 'kakao' && users.length > 0) {
       const refreshed = users.find((u) => u.id === currentUser.id);
       if (refreshed && JSON.stringify(refreshed) !== JSON.stringify(currentUser)) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
