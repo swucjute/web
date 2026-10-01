@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWithdrawMe } from '../../api/generated/member/member';
 import {
   ChevronRight, LogOut, BookHeart, ClipboardCheck, FileText,
   LayoutGrid, CreditCard, Users, DollarSign, Calendar,
-  Church, Music, ClipboardList, Pencil,
+  Church, Music, ClipboardList, Pencil, UserX,
 } from 'lucide-react';
 
 const roleLabel = (role: string) =>
@@ -84,6 +85,8 @@ export function MorePage() {
   const { currentUser, logout, isLeader } = useAuth();
   const navigate = useNavigate();
   const [showSoonToast, setShowSoonToast] = useState(false);
+  const [withdrawError, setWithdrawError] = useState('');
+  const withdrawMutation = useWithdrawMe();
 
   const handleSoonClick = () => {
     setShowSoonToast(true);
@@ -93,6 +96,18 @@ export function MorePage() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleWithdraw = async () => {
+    if (!window.confirm('회원 탈퇴 시 현재 계정을 더 이상 사용할 수 없습니다. 탈퇴하시겠습니까?')) return;
+    setWithdrawError('');
+    try {
+      await withdrawMutation.mutateAsync();
+      logout();
+      navigate('/login', { replace: true });
+    } catch {
+      setWithdrawError('회원 탈퇴를 처리하지 못했습니다.');
+    }
   };
 
   if (!currentUser) return null;
@@ -157,6 +172,11 @@ export function MorePage() {
           <span className="flex-1 text-sm font-medium text-left">로그아웃</span>
           <ChevronRight size={15} className="text-red-300" />
         </button>
+        <button onClick={handleWithdraw} disabled={withdrawMutation.isPending} className="mt-3 w-full flex items-center justify-center gap-2 py-3 text-xs text-gray-400">
+          <UserX size={14} />
+          {withdrawMutation.isPending ? '탈퇴 처리 중...' : '회원 탈퇴'}
+        </button>
+        {withdrawError && <p className="text-center text-xs text-red-500">{withdrawError}</p>}
       </div>
 
       {/* 준비중 토스트 */}
