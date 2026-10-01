@@ -9,6 +9,8 @@ import {
   ZoomIn, ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import { useGetWorship } from '../api/generated/worship/worship';
+import { worshipDetailToView } from '../api/worshipAdapter';
 
 function getYoutubeVideoId(url: string): string | null {
   const patterns = [
@@ -186,14 +188,18 @@ function ToggleRow({
 }
 
 export function WorshipDetailContent({ worshipId }: Props) {
-  const { worships, surveys } = useData();
+  const { surveys } = useData();
+  const { data, isLoading } = useGetWorship(Number(worshipId), {
+    query: { enabled: Number.isFinite(Number(worshipId)) },
+  });
   const [openScripture, setOpenScripture] = useState(false);
   const [openBulletin, setOpenBulletin] = useState(false);
   const [openPraises, setOpenPraises] = useState(false);
   const [openAnnouncements, setOpenAnnouncements] = useState(false);
 
-  const worship = worships.find((w) => w.id === worshipId);
-  if (!worship) return null;
+  if (isLoading) return <p className="py-12 text-center text-sm text-gray-400">예배 정보를 불러오는 중...</p>;
+  if (!data?.data) return <p className="py-12 text-center text-sm text-gray-400">예배 정보를 찾을 수 없습니다.</p>;
+  const worship = worshipDetailToView(data.data);
 
   const displayPraises = worship.inlinePraises ?? [];
   const bulletinImages = worship.bulletinImages ?? [];
